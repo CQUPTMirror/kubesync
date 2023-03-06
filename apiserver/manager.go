@@ -32,7 +32,6 @@ type ApiServer interface {
 type Manager struct {
 	config     *rest.Config
 	engine     *gin.Engine
-	adapter    operatorAdapter
 	httpClient *http.Client
 	client     client.Client
 	started    bool
@@ -70,9 +69,9 @@ func GetTUNASyncManager(config *rest.Config, options Options) (ApiServer, error)
 
 	s := &Manager{
 		config:    config,
-		cache:     cc,
 		client:    client,
 		internal:  context.Background(),
+		cache:     cc,
 		port:      options.Port,
 		namespace: options.Namespace,
 	}
