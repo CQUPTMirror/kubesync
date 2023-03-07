@@ -1,4 +1,4 @@
-package apiserver
+package manager
 
 import (
 	"bytes"
@@ -6,13 +6,20 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/ztelliot/kubesync/api/v1beta1"
+	"github.com/ztelliot/kubesync/internal"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
+	kubelog "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -20,17 +27,131 @@ const (
 	_infoKey  = "message"
 )
 
-func contextErrorLogger(c *gin.Context) {
-	errs := c.Errors.ByType(gin.ErrorTypeAny)
-	if len(errs) > 0 {
-		for _, err := range errs {
-			runLog.Error(err, `"in request "%s %s: %s"`,
-				c.Request.Method, c.Request.URL.Path,
-				err.Error())
-		}
+var (
+	defaultRetryPeriod = 2 * time.Second
+	runLog             = kubelog.Log.WithName("kubesync").WithName("run")
+)
+
+type Options struct {
+	Scheme    *runtime.Scheme
+	Namespace string
+	Port      int
+}
+
+type Manager struct {
+	config     *rest.Config
+	engine     *gin.Engine
+	httpClient *http.Client
+	client     client.Client
+	started    bool
+	internal   context.Context
+	cache      cache.Cache
+	port       int
+	namespace  string
+	rwmu       sync.RWMutex
+}
+
+func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) {
+	mapper, err := apiutil.NewDynamicRESTMapper(config)
+	if err != nil {
+		return nil, err
 	}
-	// pass on to the next middleware in chain
-	c.Next()
+
+	cc, err := cache.New(config, cache.Options{
+		Scheme:    options.Scheme,
+		Mapper:    mapper,
+		Resync:    &defaultRetryPeriod,
+		Namespace: options.Namespace,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	c, err := client.New(config, client.Options{Scheme: options.Scheme, Mapper: mapper})
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := client.NewDelegatingClient(client.NewDelegatingClientInput{CacheReader: cc, Client: c})
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Manager{
+		config:    config,
+		client:    client,
+		internal:  context.Background(),
+		cache:     cc,
+		port:      options.Port,
+		namespace: options.Namespace,
+	}
+
+	gin.SetMode(gin.ReleaseMode)
+
+	s.engine = gin.New()
+	s.engine.Use(gin.Recovery())
+
+	// common log middleware
+	s.engine.Use(contextErrorLogger)
+
+	s.engine.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{_infoKey: "pong"})
+	})
+
+	// list jobs, status page
+	s.engine.GET("/jobs", s.listAllJobs)
+
+	// mirror online
+	s.engine.POST("/jobs", s.registerMirror)
+
+	// mirrorID should be valid in this route group
+	mirrorValidateGroup := s.engine.Group("/jobs")
+	{
+		// delete specified mirror
+		mirrorValidateGroup.DELETE(":id", s.deleteJob)
+		// get job list
+		mirrorValidateGroup.GET(":id", s.getJob)
+		// post job status
+		mirrorValidateGroup.POST(":id", s.updateJob)
+		mirrorValidateGroup.POST(":id/size", s.updateMirrorSize)
+		mirrorValidateGroup.POST(":id/schedules", s.updateSchedules)
+		// for tunasynctl to post commands
+		mirrorValidateGroup.POST(":id/cmd", s.handleClientCmd)
+	}
+
+	return s, nil
+}
+
+func (m *Manager) Start(ctx context.Context) error {
+	m.waitForCache()
+
+	runLog.Info("Run tunasync manager server.")
+
+	go func() {
+		if err := m.Run(m.internal); err != nil {
+			panic(err)
+		}
+	}()
+	select {
+	case <-ctx.Done():
+		return nil
+	}
+}
+
+func (m *Manager) waitForCache() {
+	if m.started {
+		return
+	}
+
+	go func() {
+		if err := m.cache.Start(m.internal); err != nil {
+			panic(err)
+		}
+	}()
+
+	// Wait for the caches to sync.
+	m.cache.WaitForCacheSync(m.internal)
+	m.started = true
 }
 
 // Run runs the manager server forever
@@ -69,13 +190,13 @@ func (m *Manager) GetJobRaw(c *gin.Context, mirrorID string) (*v1beta1.Job, erro
 	return job, err
 }
 
-func (m *Manager) GetJob(c *gin.Context, mirrorID string) (w MirrorStatus, err error) {
+func (m *Manager) GetJob(c *gin.Context, mirrorID string) (w internal.MirrorStatus, err error) {
 	job, err := m.GetJobRaw(c, mirrorID)
-	w = MirrorStatus{ID: mirrorID, JobStatus: job.Status}
+	w = internal.MirrorStatus{ID: mirrorID, JobStatus: job.Status}
 	return
 }
 
-func (m *Manager) UpdateJobStatus(c *gin.Context, w MirrorStatus) error {
+func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error {
 	job, err := m.GetJobRaw(c, w.ID)
 	if err != nil {
 		return err
@@ -86,7 +207,7 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w MirrorStatus) error {
 	return err
 }
 
-func (m *Manager) CreateJob(ctx context.Context, c MirrorConfig) error {
+func (m *Manager) CreateJob(ctx context.Context, c internal.MirrorConfig) error {
 	job := &v1beta1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: m.namespace},
 		Spec:       c.JobSpec,
@@ -96,13 +217,15 @@ func (m *Manager) CreateJob(ctx context.Context, c MirrorConfig) error {
 
 // ListJobs respond with all jobs of specified mirrors
 func (s *Manager) listAllJobs(c *gin.Context) {
-	var ws []MirrorStatus
+	var ws []internal.MirrorStatus
 
+	s.rwmu.RLock()
 	jobs := new(v1beta1.JobList)
 	err := s.client.List(c.Request.Context(), jobs, &client.ListOptions{Namespace: s.namespace})
+	s.rwmu.RUnlock()
 
 	for _, v := range jobs.Items {
-		w := MirrorStatus{ID: v.Name, JobStatus: v.Status}
+		w := internal.MirrorStatus{ID: v.Name, JobStatus: v.Status}
 		ws = append(ws, w)
 	}
 
@@ -119,10 +242,12 @@ func (s *Manager) listAllJobs(c *gin.Context) {
 
 func (s *Manager) getJob(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var status MirrorStatus
+	var status internal.MirrorStatus
 	c.BindJSON(&status)
 
+	s.rwmu.Lock()
 	status, err := s.GetJob(c, mirrorID)
+	s.rwmu.Unlock()
 
 	if err != nil {
 		err := fmt.Errorf("failed to get job %s: %s",
@@ -138,7 +263,11 @@ func (s *Manager) getJob(c *gin.Context) {
 // deleteJob deletes one job by id
 func (s *Manager) deleteJob(c *gin.Context) {
 	mirrorID := c.Param("id")
+
+	s.rwmu.Lock()
 	job, err := s.GetJobRaw(c, mirrorID)
+	s.rwmu.Unlock()
+
 	if err != nil {
 		return
 	}
@@ -157,11 +286,14 @@ func (s *Manager) deleteJob(c *gin.Context) {
 
 // registerMirror register an newly-online mirror
 func (s *Manager) registerMirror(c *gin.Context) {
-	var _mirror MirrorStatus
+	var _mirror internal.MirrorStatus
 	c.BindJSON(&_mirror)
 	_mirror.LastOnline = time.Now().Unix()
 	_mirror.LastRegister = time.Now().Unix()
+	s.rwmu.Lock()
 	err := s.UpdateJobStatus(c, _mirror)
+	s.rwmu.Unlock()
+
 	if err != nil {
 		err := fmt.Errorf("failed to register mirror: %s",
 			err.Error(),
@@ -183,7 +315,7 @@ func (s *Manager) returnErrJSON(c *gin.Context, code int, err error) {
 }
 
 func (s *Manager) updateSchedules(c *gin.Context) {
-	var schedules MirrorSchedules
+	var schedules internal.MirrorSchedules
 	c.BindJSON(&schedules)
 
 	for _, schedule := range schedules.Schedules {
@@ -195,7 +327,10 @@ func (s *Manager) updateSchedules(c *gin.Context) {
 			)
 		}
 
+		s.rwmu.Lock()
 		curStatus, err := s.GetJob(c, mirrorID)
+		s.rwmu.Unlock()
+
 		if err != nil {
 			runLog.Error(err, "failed to get job %s: %s",
 				mirrorID, err.Error(),
@@ -209,7 +344,10 @@ func (s *Manager) updateSchedules(c *gin.Context) {
 		}
 
 		curStatus.Scheduled = schedule.NextSchedule
+		s.rwmu.Lock()
 		err = s.UpdateJobStatus(c, curStatus)
+		s.rwmu.Unlock()
+
 		if err != nil {
 			err := fmt.Errorf("failed to update job %s: %s",
 				mirrorID, err.Error(),
@@ -225,10 +363,12 @@ func (s *Manager) updateSchedules(c *gin.Context) {
 
 func (s *Manager) updateJob(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var status MirrorStatus
+	var status internal.MirrorStatus
 	c.BindJSON(&status)
 
+	s.rwmu.Lock()
 	curStatus, err := s.GetJob(c, mirrorID)
+	s.rwmu.Unlock()
 
 	curTime := time.Now().Unix()
 
@@ -266,7 +406,10 @@ func (s *Manager) updateJob(c *gin.Context) {
 		runLog.Info("Job [%s] %s", status.ID, status.Status)
 	}
 
+	s.rwmu.Lock()
 	err = s.UpdateJobStatus(c, status)
+	s.rwmu.Unlock()
+
 	if err != nil {
 		err := fmt.Errorf("failed to update job %s: %s",
 			mirrorID, err.Error(),
@@ -288,7 +431,10 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 	c.BindJSON(&msg)
 
 	mirrorName := msg.ID
+	s.rwmu.Lock()
 	status, err := s.GetJob(c, mirrorID)
+	s.rwmu.Unlock()
+
 	if err != nil {
 		runLog.Error(err,
 			"Failed to get status of mirror %s @<%s>: %s",
@@ -305,7 +451,10 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 
 	runLog.Info("Mirror size of [%s]: %s", status.ID, status.Size)
 
+	s.rwmu.Lock()
 	err = s.UpdateJobStatus(c, status)
+	s.rwmu.Unlock()
+
 	if err != nil {
 		err := fmt.Errorf("failed to update job %s of mirror %s: %s",
 			mirrorName, mirrorID, err.Error(),
@@ -334,7 +483,7 @@ func PostJSON(mirrorID string, obj interface{}, client *http.Client) (*http.Resp
 
 func (s *Manager) handleClientCmd(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var clientCmd ClientCmd
+	var clientCmd internal.ClientCmd
 	c.BindJSON(&clientCmd)
 	if mirrorID == "" {
 		// TODO: decide which mirror should do this mirror when MirrorID is null string
@@ -343,18 +492,23 @@ func (s *Manager) handleClientCmd(c *gin.Context) {
 		return
 	}
 
+	s.rwmu.Lock()
 	curStat, err := s.GetJob(c, mirrorID)
+	s.rwmu.Unlock()
+
 	changed := false
 	switch clientCmd.Cmd {
-	case CmdDisable:
+	case internal.CmdDisable:
 		curStat.Status = v1beta1.Disabled
 		changed = true
-	case CmdStop:
+	case internal.CmdStop:
 		curStat.Status = v1beta1.Paused
 		changed = true
 	}
 	if changed {
+		s.rwmu.Lock()
 		s.UpdateJobStatus(c, curStat)
+		s.rwmu.Unlock()
 	}
 
 	runLog.Info("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID)

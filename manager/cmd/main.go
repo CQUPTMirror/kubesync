@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	mirrorv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
-	"github.com/ztelliot/kubesync/apiserver"
+	"github.com/ztelliot/kubesync/manager"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -60,7 +60,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
-	api, err := apiserver.GetTUNASyncManager(ctrl.GetConfigOrDie(), apiserver.Options{
+	mgr, err := manager.GetTUNASyncManager(ctrl.GetConfigOrDie(), manager.Options{
 		Scheme:    scheme,
 		Port:      apiPort,
 		Namespace: namespace,
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	setupLog.Info("starting api service")
-	if err := api.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running api service")
 		os.Exit(1)
 	}
