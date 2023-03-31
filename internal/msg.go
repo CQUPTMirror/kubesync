@@ -38,25 +38,18 @@ const (
 	CmdStart CmdVerb = iota
 	// CmdStop stop syncing, but keep the job
 	CmdStop
-	// CmdDisable disable the job (stops goroutine)
-	CmdDisable
 	// CmdRestart restart a syncing job
 	CmdRestart
 	// CmdPing ensures the goroutine is alive
 	CmdPing
-
-	// CmdReload tells a worker to reload mirror config
-	CmdReload
 )
 
 func (c CmdVerb) String() string {
 	mapping := map[CmdVerb]string{
 		CmdStart:   "start",
 		CmdStop:    "stop",
-		CmdDisable: "disable",
 		CmdRestart: "restart",
 		CmdPing:    "ping",
-		CmdReload:  "reload",
 	}
 	return mapping[c]
 }
@@ -65,10 +58,8 @@ func NewCmdVerbFromString(s string) CmdVerb {
 	mapping := map[string]CmdVerb{
 		"start":   CmdStart,
 		"stop":    CmdStop,
-		"disable": CmdDisable,
 		"restart": CmdRestart,
 		"ping":    CmdPing,
-		"reload":  CmdReload,
 	}
 	return mapping[s]
 }
@@ -94,7 +85,6 @@ func (s *CmdVerb) UnmarshalJSON(b []byte) error {
 // A ClientCmd is the command message send from client
 // to the manager
 type ClientCmd struct {
-	Cmd     CmdVerb         `json:"cmd"`
-	Args    []string        `json:"args"`
-	Options map[string]bool `json:"options"`
+	Cmd   CmdVerb `json:"cmd"`
+	Force bool    `json:"force"`
 }

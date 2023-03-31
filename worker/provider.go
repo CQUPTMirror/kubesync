@@ -47,7 +47,6 @@ type mirrorProvider interface {
 	WorkingDir() string
 	LogDir() string
 	LogFile() string
-	IsMaster() bool
 	DataSize() string
 
 	// enter context
@@ -93,16 +92,6 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 	}
 	logDir = formatLogDir(logDir, mirror)
 
-	// IsMaster
-	isMaster := true
-	if mirror.Role == "slave" {
-		isMaster = false
-	} else {
-		if mirror.Role != "" && mirror.Role != "master" {
-			logger.Warningf("Invalid role configuration for %s", mirror.Name)
-		}
-	}
-
 	var provider mirrorProvider
 
 	switch mirror.Provider {
@@ -125,7 +114,6 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 		if err != nil {
 			panic(err)
 		}
-		p.isMaster = isMaster
 		provider = p
 	case provRsync:
 		rc := rsyncConfig{
@@ -153,7 +141,6 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 		if err != nil {
 			panic(err)
 		}
-		p.isMaster = isMaster
 		provider = p
 	case provTwoStageRsync:
 		rc := twoStageRsyncConfig{
@@ -181,7 +168,6 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 		if err != nil {
 			panic(err)
 		}
-		p.isMaster = isMaster
 		provider = p
 	default:
 		panic(errors.New("Invalid mirror provider"))

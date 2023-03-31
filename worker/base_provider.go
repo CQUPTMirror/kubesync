@@ -17,7 +17,6 @@ type baseProvider struct {
 	interval time.Duration
 	retry    int
 	timeout  time.Duration
-	isMaster bool
 
 	cmd       *cmdJob
 	logFileFd *os.File
@@ -57,10 +56,6 @@ func (p *baseProvider) Retry() int {
 
 func (p *baseProvider) Timeout() time.Duration {
 	return p.timeout
-}
-
-func (p *baseProvider) IsMaster() bool {
-	return p.isMaster
 }
 
 func (p *baseProvider) WorkingDir() string {

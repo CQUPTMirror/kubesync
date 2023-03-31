@@ -136,7 +136,6 @@ type mirrorConfig struct {
 	MirrorSubDir string            `toml:"mirror_subdir"`
 	LogDir       string            `toml:"log_dir"`
 	Env          map[string]string `toml:"env"`
-	Role         string            `toml:"role"`
 
 	// These two options over-write the global options
 	ExecOnSuccess []string `toml:"exec_on_success"`
@@ -159,12 +158,6 @@ type mirrorConfig struct {
 	RsyncOptions  []string `toml:"rsync_options"`
 	RsyncOverride []string `toml:"rsync_override"`
 	Stage1Profile string   `toml:"stage1_profile"`
-
-	MemoryLimit MemBytes `toml:"memory_limit"`
-
-	DockerImage   string   `toml:"docker_image"`
-	DockerVolumes []string `toml:"docker_volumes"`
-	DockerOptions []string `toml:"docker_options"`
 
 	SnapshotPath string `toml:"snapshot_path"`
 

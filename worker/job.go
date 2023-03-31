@@ -26,7 +26,6 @@ const (
 
 type jobMessage struct {
 	status   kubesync.SyncStatus
-	name     string
 	msg      string
 	schedule bool
 }
@@ -113,7 +112,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 					hookname, m.Name(), err.Error(),
 				)
 				managerChan <- jobMessage{
-					kubesync.Failed, m.Name(),
+					kubesync.Failed,
 					fmt.Sprintf("error exec hook %s: %s", hookname, err.Error()),
 					true,
 				}
@@ -126,7 +125,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 	runJobWrapper := func(kill <-chan empty, jobDone chan<- empty) error {
 		defer close(jobDone)
 
-		managerChan <- jobMessage{kubesync.PreSyncing, m.Name(), "", false}
+		managerChan <- jobMessage{kubesync.PreSyncing, "", false}
 		logger.Noticef("start syncing: %s", m.Name())
 
 		Hooks := provider.Hooks()
@@ -153,7 +152,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 			}
 
 			// start syncing
-			managerChan <- jobMessage{kubesync.Syncing, m.Name(), "", false}
+			managerChan <- jobMessage{kubesync.Syncing, "", false}
 
 			var syncErr error
 			syncDone := make(chan error, 1)
@@ -224,12 +223,12 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 			if syncErr == nil {
 				// syncing success
 				m.size = provider.DataSize()
-				managerChan <- jobMessage{kubesync.Success, m.Name(), "", (m.State() == stateReady)}
+				managerChan <- jobMessage{kubesync.Success, "", (m.State() == stateReady)}
 				return nil
 			}
 
 			// syncing failed
-			managerChan <- jobMessage{kubesync.Failed, m.Name(), syncErr.Error(), (retry == provider.Retry()-1) && (m.State() == stateReady)}
+			managerChan <- jobMessage{kubesync.Failed, syncErr.Error(), (retry == provider.Retry()-1) && (m.State() == stateReady)}
 
 			// gracefully exit
 			if stopASAP {

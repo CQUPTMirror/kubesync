@@ -3,9 +3,7 @@ package worker
 import (
 	"fmt"
 	"net/http"
-	"os"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -70,82 +68,11 @@ func (w *Worker) Halt() {
 	close(w.exit)
 }
 
-// ReloadMirrorConfig refresh the providers and jobs
-// from new mirror configs
-// TODO: deleted job should be removed from manager-side mirror list
-func (w *Worker) ReloadMirrorConfig(newMirrors []mirrorConfig) {
-	w.L.Lock()
-	defer w.L.Unlock()
-	logger.Info("Reloading mirror configs")
-
-	oldMirrors := w.cfg.Mirrors
-	difference := diffMirrorConfig(oldMirrors, newMirrors)
-
-	// first deal with deletion and modifications
-	for _, op := range difference {
-		if op.diffOp == diffAdd {
-			continue
-		}
-		name := op.mirCfg.Name
-		switch op.diffOp {
-		case diffDelete:
-			w.disableJob(w.job)
-			logger.Noticef("Deleted job %s", name)
-		case diffModify:
-			jobState := w.job.State()
-			w.disableJob(w.job)
-			// set new provider
-			provider := newMirrorProvider(op.mirCfg, w.cfg)
-			if err := w.job.SetProvider(provider); err != nil {
-				logger.Errorf("Error setting job provider of %s: %s", name, err.Error())
-				continue
-			}
-
-			// re-schedule job according to its previous state
-			if jobState == stateDisabled {
-				w.job.SetState(stateDisabled)
-			} else if jobState == statePaused {
-				w.job.SetState(statePaused)
-				go w.job.Run(w.managerChan, w.semaphore)
-			} else {
-				w.job.SetState(stateNone)
-				go w.job.Run(w.managerChan, w.semaphore)
-				w.schedule.AddJob(time.Now().Unix(), w.job)
-			}
-			logger.Noticef("Reloaded job %s", name)
-		}
-	}
-	// for added new jobs, just start new jobs
-	for _, op := range difference {
-		if op.diffOp != diffAdd {
-			continue
-		}
-		provider := newMirrorProvider(op.mirCfg, w.cfg)
-		job := newMirrorJob(provider)
-		w.job = job
-
-		job.SetState(stateNone)
-		go job.Run(w.managerChan, w.semaphore)
-		w.schedule.AddJob(time.Now().Unix(), job)
-		logger.Noticef("New job %s", job.Name())
-	}
-
-	w.cfg.Mirrors = newMirrors
-}
-
 func (w *Worker) initJobs() {
 	for _, mirror := range w.cfg.Mirrors {
 		// Create Provider
 		provider := newMirrorProvider(mirror, w.cfg)
 		w.job = newMirrorJob(provider)
-	}
-}
-
-func (w *Worker) disableJob(job *mirrorJob) {
-	w.schedule.Remove(job.Name())
-	if job.State() != stateDisabled {
-		job.ctrlChan <- jobDisable
-		<-job.disabled
 	}
 }
 
@@ -167,17 +94,6 @@ func (w *Worker) makeHTTPServer() {
 
 		logger.Noticef("Received command: %v", cmd)
 
-		// worker-level commands
-		switch cmd.Cmd {
-		case CmdReload:
-			// send myself a SIGHUP
-			pid := os.Getpid()
-			syscall.Kill(pid, syscall.SIGHUP)
-		default:
-			c.JSON(http.StatusNotAcceptable, gin.H{"msg": "Invalid Command"})
-			return
-		}
-
 		// No matter what command, the existing job
 		// schedule should be flushed
 		w.schedule.Remove(w.job.Name())
@@ -191,7 +107,7 @@ func (w *Worker) makeHTTPServer() {
 		}
 		switch cmd.Cmd {
 		case CmdStart:
-			if cmd.Options["force"] {
+			if cmd.Force {
 				w.job.ctrlChan <- jobForceStart
 			} else {
 				w.job.ctrlChan <- jobStart
@@ -204,8 +120,6 @@ func (w *Worker) makeHTTPServer() {
 			if w.job.State() != stateDisabled {
 				w.job.ctrlChan <- jobStop
 			}
-		case CmdDisable:
-			w.disableJob(w.job)
 		case CmdPing:
 			// empty
 		default:
@@ -282,7 +196,7 @@ func (w *Worker) runSchedule() {
 		case jobMsg := <-w.managerChan:
 			// got status update from job
 			if (w.job.State() != stateReady) && (w.job.State() != stateHalting) {
-				logger.Infof("Job %s state is not ready, skip adding new schedule", jobMsg.name)
+				logger.Infof("Job %s state is not ready, skip adding new schedule", w.Name())
 				continue
 			}
 
@@ -319,7 +233,7 @@ func (w *Worker) runSchedule() {
 			for {
 				select {
 				case jobMsg := <-w.managerChan:
-					logger.Debugf("status update from %s", jobMsg.name)
+					logger.Debugf("status update from %s", w.Name())
 					if jobMsg.status == Failed || jobMsg.status == Success {
 						w.updateStatus(w.job, jobMsg)
 					}
@@ -350,7 +264,7 @@ func (w *Worker) registerWorker() {
 	msg := MirrorStatus{ID: w.Name()}
 
 	for _, root := range w.cfg.Manager.APIBaseList() {
-		url := fmt.Sprintf("%s/workers", root)
+		url := fmt.Sprintf("%s/jobs", root)
 		logger.Debugf("register on manager url: %s", url)
 		for retry := 10; retry > 0; {
 			if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -382,11 +296,11 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 
 	for _, root := range w.cfg.Manager.APIBaseList() {
 		url := fmt.Sprintf(
-			"%s/workers/%s/jobs/%s", root, w.Name(), jobMsg.name,
+			"%s/jobs/%s", root, w.Name(),
 		)
 		logger.Debugf("reporting on manager url: %s", url)
 		if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
-			logger.Errorf("Failed to update mirror(%s) status: %s", jobMsg.name, err.Error())
+			logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 		}
 	}
 }
@@ -403,7 +317,7 @@ func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
 
 	for _, root := range w.cfg.Manager.APIBaseList() {
 		url := fmt.Sprintf(
-			"%s/workers/%s/schedules", root, w.Name(),
+			"%s/jobs/%s/schedules", root, w.Name(),
 		)
 		logger.Debugf("reporting on manager url: %s", url)
 		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -416,7 +330,7 @@ func (w *Worker) fetchJobStatus() []MirrorStatus {
 	var mirrorList []MirrorStatus
 	apiBase := w.cfg.Manager.APIBaseList()[0]
 
-	url := fmt.Sprintf("%s/workers/%s/jobs", apiBase, w.Name())
+	url := fmt.Sprintf("%s/jobs/%s", apiBase, w.Name())
 
 	if _, err := GetJSON(url, &mirrorList, w.httpClient); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())

@@ -109,12 +109,13 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	{
 		// delete specified mirror
 		mirrorValidateGroup.DELETE(":id", s.deleteJob)
-		// get job list
+		// get job detail
 		mirrorValidateGroup.GET(":id", s.getJob)
 		// post job status
 		mirrorValidateGroup.POST(":id", s.updateJob)
 		mirrorValidateGroup.POST(":id/size", s.updateMirrorSize)
 		mirrorValidateGroup.POST(":id/schedules", s.updateSchedules)
+		mirrorValidateGroup.POST(":id/disable", s.disableJob)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST(":id/cmd", s.handleClientCmd)
 	}
@@ -466,6 +467,35 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 	c.JSON(http.StatusOK, status)
 }
 
+func (s *Manager) disableJob(c *gin.Context) {
+	mirrorID := c.Param("id")
+
+	s.rwmu.Lock()
+	curStat, err := s.GetJob(c, mirrorID)
+	s.rwmu.Unlock()
+
+	if err != nil {
+		return
+	}
+
+	curStat.Status = v1beta1.Disabled
+	s.rwmu.Lock()
+	s.UpdateJobStatus(c, curStat)
+	s.rwmu.Unlock()
+
+	// err = s.client.Delete(c.Request.Context(), job)
+	if err != nil {
+		err := fmt.Errorf("failed to delete mirror: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		s.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	runLog.Info("Mirror <%s> deleted", mirrorID)
+	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
+}
+
 // PostJSON posts json object to url
 func PostJSON(mirrorID string, obj interface{}, client *http.Client) (*http.Response, error) {
 	if client == nil {
@@ -498,9 +528,6 @@ func (s *Manager) handleClientCmd(c *gin.Context) {
 
 	changed := false
 	switch clientCmd.Cmd {
-	case internal.CmdDisable:
-		curStat.Status = v1beta1.Disabled
-		changed = true
 	case internal.CmdStop:
 		curStat.Status = v1beta1.Paused
 		changed = true
