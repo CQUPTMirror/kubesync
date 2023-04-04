@@ -21,13 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-type PersistentVolumeClaimPolicy string
-
-const (
-	PersistentVolumeClaimDelete PersistentVolumeClaimPolicy = "Delete"
-	PersistentVolumeClaimRetain PersistentVolumeClaimPolicy = "Retain"
-)
-
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
@@ -46,7 +39,6 @@ type DeployConfig struct {
 	Image            string                        `json:"image"`
 	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	NodeSelector     map[string]string             `json:"nodeSelector,omitempty"`
 	NodeName         string                        `json:"nodeName,omitempty"`
 	Affinity         *corev1.Affinity              `json:"affinity,omitempty"`
 	Tolerations      []corev1.Toleration           `json:"tolerations,omitempty"`
@@ -58,7 +50,6 @@ type PVConfig struct {
 	Size             string                              `json:"size"`
 	StorageClassName *string                             `json:"storageClassName,omitempty"`
 	AccessModes      []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
-	Policy           PersistentVolumeClaimPolicy         `json:"policy,omitempty"`
 }
 
 // JobSpec defines the desired state of Job

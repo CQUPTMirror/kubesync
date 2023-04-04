@@ -34,13 +34,6 @@ func (in *DeployConfig) DeepCopyInto(out *DeployConfig) {
 		*out = make([]v1.LocalObjectReference, len(*in))
 		copy(*out, *in)
 	}
-	if in.NodeSelector != nil {
-		in, out := &in.NodeSelector, &out.NodeSelector
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.Affinity != nil {
 		in, out := &in.Affinity, &out.Affinity
 		*out = new(v1.Affinity)

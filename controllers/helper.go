@@ -6,6 +6,7 @@ import (
 	jobsv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	extensionsv1 "k8s.io/api/extensions/v1beta1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -48,12 +49,16 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 			Labels:    map[string]string{"job": job.Name},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes:      job.Spec.Volume.AccessModes,
-			StorageClassName: job.Spec.Volume.StorageClassName,
 			Resources: corev1.ResourceRequirements{
 				Requests: corev1.ResourceList{corev1.ResourceStorage: resourceStorage},
 			},
 		},
+	}
+	if job.Spec.Volume.AccessModes != nil {
+		pvc.Spec.AccessModes = job.Spec.Volume.AccessModes
+	}
+	if job.Spec.Volume.StorageClassName != nil {
+		pvc.Spec.StorageClassName = job.Spec.Volume.StorageClassName
 	}
 
 	if err := ctrl.SetControllerReference(&job, &pvc, r.Scheme); err != nil {
@@ -63,6 +68,9 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 }
 
 func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deployment, error) {
+	limitMemory, _ := resource.ParseQuantity(job.Spec.Deploy.MemoryLimit)
+	limitCPU, _ := resource.ParseQuantity(job.Spec.Deploy.CPULimit)
+
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(6000)},
@@ -114,6 +122,9 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 6000, Name: "api", Protocol: "TCP"},
 							},
+							Resources: corev1.ResourceRequirements{
+								Requests: corev1.ResourceList{corev1.ResourceLimitsMemory: limitMemory, corev1.ResourceLimitsCPU: limitCPU},
+							},
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -126,9 +137,45 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 							},
 						},
 					},
+					ImagePullSecrets: job.Spec.Deploy.ImagePullSecrets,
+					NodeName:         job.Spec.Deploy.NodeName,
+					Affinity:         job.Spec.Deploy.Affinity,
+					Tolerations:      job.Spec.Deploy.Tolerations,
 				},
 			},
 		},
+	}
+	// if job.Spec.Deploy.ImagePullPolicy != nil {
+
+	// }
+	if r.Domain != "" && r.Image != "" {
+		frontProbe := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(80)},
+			},
+			InitialDelaySeconds: 10,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       30,
+			SuccessThreshold:    1,
+			FailureThreshold:    5,
+		}
+		frontContainer := corev1.Container{
+			Name:            job.Name + "-front",
+			Image:           r.Image,
+			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
+			LivenessProbe:   frontProbe,
+			ReadinessProbe:  frontProbe,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      job.Name,
+					MountPath: "/data",
+				},
+			},
+			Ports: []corev1.ContainerPort{
+				{ContainerPort: 80, Name: "front", Protocol: "TCP"},
+			},
+		}
+		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, frontContainer)
 	}
 
 	if err := ctrl.SetControllerReference(&job, &app, r.Scheme); err != nil {
@@ -153,6 +200,9 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
+	if r.Domain != "" && r.Image != "" {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: 80, Protocol: "TCP", TargetPort: intstr.FromInt(80)})
+	}
 
 	if err := ctrl.SetControllerReference(&job, &svc, r.Scheme); err != nil {
 		return svc, err
@@ -160,43 +210,38 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 	return svc, nil
 }
 
-// func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job, svc corev1.Service) (v1beta1.Ingress, error) {
-// 	ib := v1beta1.IngressBackend{
-// 		ServiceName: svc.Name,
-// 		ServicePort: intstr.FromInt(int(svc.Spec.Ports[0].Port)),
-// 	}
+func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (extensionsv1.Ingress, error) {
+	ingr := extensionsv1.Ingress{
+		TypeMeta: metav1.TypeMeta{APIVersion: extensionsv1.SchemeGroupVersion.String(), Kind: "Ingress"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      job.Name,
+			Namespace: job.Namespace,
+			Labels:    map[string]string{"job": job.Name},
+		},
+		Spec: extensionsv1.IngressSpec{
+			Rules: []extensionsv1.IngressRule{
+				{
+					Host: r.Domain,
+					IngressRuleValue: extensionsv1.IngressRuleValue{
+						HTTP: &extensionsv1.HTTPIngressRuleValue{
+							Paths: []extensionsv1.HTTPIngressPath{
+								{
+									Path: "/" + job.Name,
+									Backend: extensionsv1.IngressBackend{
+										ServiceName: job.Name,
+										ServicePort: intstr.FromInt(80),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-// 	var rules []v1beta1.IngressRule
-// 	for _, sd := range job.Spec.SubDomains {
-// 		rules = append(rules, v1beta1.IngressRule{
-// 			Host: fmt.Sprintf("%s.darkroom.example.com", sd),
-// 			IngressRuleValue: v1beta1.IngressRuleValue{
-// 				HTTP: &v1beta1.HTTPIngressRuleValue{
-// 					Paths: []v1beta1.HTTPIngressPath{
-// 						{
-// 							Path:    "/",
-// 							Backend: ib,
-// 						},
-// 					},
-// 				},
-// 			},
-// 		})
-// 	}
-
-// 	ingr := v1beta1.Ingress{
-// 		TypeMeta: metav1.TypeMeta{APIVersion: v1beta1.SchemeGroupVersion.String(), Kind: "Ingress"},
-// 		ObjectMeta: metav1.ObjectMeta{
-// 			Name:      darkroom.Name,
-// 			Namespace: darkroom.Namespace,
-// 		},
-// 		Spec: v1beta1.IngressSpec{
-// 			Backend: &ib,
-// 			Rules:   rules,
-// 		},
-// 	}
-
-// 	if err := ctrl.SetControllerReference(&darkroom, &ingr, r.Scheme); err != nil {
-// 		return ingr, err
-// 	}
-// 	return ingr, nil
-// }
+	if err := ctrl.SetControllerReference(&job, &ingr, r.Scheme); err != nil {
+		return ingr, err
+	}
+	return ingr, nil
+}

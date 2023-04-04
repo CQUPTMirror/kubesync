@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"strings"
 	"time"
-
-	"github.com/ztelliot/kubesync/internal"
 )
 
 type rsyncConfig struct {
@@ -124,7 +122,7 @@ func (p *rsyncProvider) Run(started chan empty) error {
 	}
 	started <- empty{}
 	if err := p.Wait(); err != nil {
-		code, msg := internal.TranslateRsyncErrorCode(err)
+		code, msg := TranslateRsyncErrorCode(err)
 		if code != 0 {
 			logger.Debug("Rsync exitcode %d (%s)", code, msg)
 			if p.logFileFd != nil {
@@ -133,7 +131,7 @@ func (p *rsyncProvider) Run(started chan empty) error {
 		}
 		return err
 	}
-	p.dataSize = internal.ExtractSizeFromRsyncLog(p.LogFile())
+	p.dataSize = ExtractSizeFromRsyncLog(p.LogFile())
 	return nil
 }
 

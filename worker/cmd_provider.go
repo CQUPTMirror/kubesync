@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/anmitsu/go-shlex"
-	"github.com/ztelliot/kubesync/internal"
 )
 
 type cmdConfig struct {
@@ -99,7 +98,7 @@ func (p *cmdProvider) Run(started chan empty) error {
 		return err
 	}
 	if p.failOnMatch != nil {
-		matches, err := internal.FindAllSubmatchInFile(p.LogFile(), p.failOnMatch)
+		matches, err := FindAllSubmatchInFile(p.LogFile(), p.failOnMatch)
 		logger.Infof("FindAllSubmatchInFile: %q\n", matches)
 		if err != nil {
 			return err
@@ -110,7 +109,7 @@ func (p *cmdProvider) Run(started chan empty) error {
 		}
 	}
 	if p.sizePattern != nil {
-		p.dataSize = internal.ExtractSizeFromLog(p.LogFile(), p.sizePattern)
+		p.dataSize = ExtractSizeFromLog(p.LogFile(), p.sizePattern)
 	}
 	return nil
 }

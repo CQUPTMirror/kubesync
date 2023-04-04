@@ -899,12 +899,6 @@ spec:
                 type: string
               nodeName:
                 type: string
-              nodeSelector:
-                additionalProperties:
-                  type: string
-                type: object
-              policy:
-                type: string
               provider:
                 type: string
               rsync_options:
