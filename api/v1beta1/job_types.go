@@ -47,9 +47,9 @@ type DeployConfig struct {
 }
 
 type PVConfig struct {
-	Size             string                              `json:"size"`
-	StorageClassName *string                             `json:"storageClassName,omitempty"`
-	AccessModes      []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+	Size         string                            `json:"size"`
+	StorageClass *string                           `json:"storageClass,omitempty"`
+	AccessMode   corev1.PersistentVolumeAccessMode `json:"accessMode,omitempty"`
 }
 
 // JobSpec defines the desired state of Job

@@ -54,11 +54,11 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 			},
 		},
 	}
-	if job.Spec.Volume.AccessModes != nil {
-		pvc.Spec.AccessModes = job.Spec.Volume.AccessModes
+	if job.Spec.Volume.AccessMode != "" {
+		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{job.Spec.Volume.AccessMode}
 	}
-	if job.Spec.Volume.StorageClassName != nil {
-		pvc.Spec.StorageClassName = job.Spec.Volume.StorageClassName
+	if job.Spec.Volume.StorageClass != nil {
+		pvc.Spec.StorageClassName = job.Spec.Volume.StorageClass
 	}
 
 	if err := ctrl.SetControllerReference(&job, &pvc, r.Scheme); err != nil {

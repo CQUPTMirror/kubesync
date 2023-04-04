@@ -35,10 +35,8 @@ spec:
           spec:
             description: JobSpec defines the desired state of Job
             properties:
-              accessModes:
-                items:
-                  type: string
-                type: array
+              accessMode:
+                type: string
               addition_options:
                 type: string
               affinity:
@@ -907,7 +905,7 @@ spec:
                 type: string
               size_pattern:
                 type: string
-              storageClassName:
+              storageClass:
                 type: string
               tolerations:
                 items:
