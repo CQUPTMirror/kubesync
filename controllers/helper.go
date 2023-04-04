@@ -6,7 +6,7 @@ import (
 	jobsv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	extensionsv1 "k8s.io/api/extensions/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -210,26 +210,28 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 	return svc, nil
 }
 
-func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (extensionsv1.Ingress, error) {
-	ingr := extensionsv1.Ingress{
-		TypeMeta: metav1.TypeMeta{APIVersion: extensionsv1.SchemeGroupVersion.String(), Kind: "Ingress"},
+func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (networkingv1.Ingress, error) {
+	ingr := networkingv1.Ingress{
+		TypeMeta: metav1.TypeMeta{APIVersion: networkingv1.SchemeGroupVersion.String(), Kind: "Ingress"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      job.Name,
 			Namespace: job.Namespace,
 			Labels:    map[string]string{"job": job.Name},
 		},
-		Spec: extensionsv1.IngressSpec{
-			Rules: []extensionsv1.IngressRule{
+		Spec: networkingv1.IngressSpec{
+			Rules: []networkingv1.IngressRule{
 				{
 					Host: r.Domain,
-					IngressRuleValue: extensionsv1.IngressRuleValue{
-						HTTP: &extensionsv1.HTTPIngressRuleValue{
-							Paths: []extensionsv1.HTTPIngressPath{
+					IngressRuleValue: networkingv1.IngressRuleValue{
+						HTTP: &networkingv1.HTTPIngressRuleValue{
+							Paths: []networkingv1.HTTPIngressPath{
 								{
 									Path: "/" + job.Name,
-									Backend: extensionsv1.IngressBackend{
-										ServiceName: job.Name,
-										ServicePort: intstr.FromInt(80),
+									Backend: networkingv1.IngressBackend{
+										Service: &networkingv1.IngressServiceBackend{
+											Name: job.Name,
+											Port: networkingv1.ServiceBackendPort{Number: 80},
+										},
 									},
 								},
 							},
