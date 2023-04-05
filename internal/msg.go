@@ -7,16 +7,21 @@ import (
 	"github.com/ztelliot/kubesync/api/v1beta1"
 )
 
+type MirrorBase struct {
+	ID        string `json:"id"`
+	Namespace string `json:"namespace"`
+}
+
 // A MirrorStatus represents a msg when
 // a worker has done syncing
 type MirrorStatus struct {
-	ID string `json:"id"`
+	MirrorBase
 
 	v1beta1.JobStatus
 }
 
 type MirrorConfig struct {
-	ID string `json:"id"`
+	MirrorBase
 
 	v1beta1.JobSpec
 }
@@ -26,8 +31,9 @@ type MirrorSchedules struct {
 }
 
 type MirrorSchedule struct {
-	MirrorID     string `json:"id"`
-	NextSchedule int64  `json:"next_schedule"`
+	MirrorBase
+
+	NextSchedule int64 `json:"next_schedule"`
 }
 
 // A CmdVerb is an action to a job or worker

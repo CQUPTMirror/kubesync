@@ -79,7 +79,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("job-controller")}
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirrorjob-controller")}
 
 	err = r.Patch(ctx, &pvc, client.Apply, applyOpts...)
 	if err != nil {

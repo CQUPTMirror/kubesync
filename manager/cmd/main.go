@@ -49,9 +49,7 @@ func init() {
 
 func main() {
 	var apiPort int
-	var namespace string
 	flag.IntVar(&apiPort, "port", 3000, "The port the api endpoint binds to.")
-	flag.StringVar(&namespace, "namespace", "default", "The namespace the mirror job use.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -61,9 +59,8 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := manager.GetTUNASyncManager(ctrl.GetConfigOrDie(), manager.Options{
-		Scheme:    scheme,
-		Port:      apiPort,
-		Namespace: namespace,
+		Scheme: scheme,
+		Port:   apiPort,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start api service")

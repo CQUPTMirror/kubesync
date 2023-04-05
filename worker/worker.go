@@ -261,7 +261,7 @@ func (w *Worker) URL() string {
 }
 
 func (w *Worker) registerWorker() {
-	msg := MirrorStatus{ID: w.Name()}
+	msg := MirrorStatus{MirrorBase: MirrorBase{ID: w.Name()}}
 
 	for _, root := range w.cfg.Manager.APIBaseList() {
 		url := fmt.Sprintf("%s/jobs", root)
@@ -284,8 +284,8 @@ func (w *Worker) registerWorker() {
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
 	smsg := MirrorStatus{
-		ID:        w.cfg.Global.Name,
-		JobStatus: JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
+		MirrorBase: MirrorBase{ID: w.cfg.Global.Name},
+		JobStatus:  JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
 	}
 
 	// Certain Providers (rsync for example) may know the size of mirror,
@@ -309,7 +309,7 @@ func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
 	var s []MirrorSchedule
 	for _, sched := range schedInfo {
 		s = append(s, MirrorSchedule{
-			MirrorID:     sched.jobName,
+			MirrorBase:   MirrorBase{ID: sched.jobName},
 			NextSchedule: sched.nextScheduled.Unix(),
 		})
 	}
