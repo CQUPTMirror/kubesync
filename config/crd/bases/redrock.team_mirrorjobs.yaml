@@ -1010,24 +1010,24 @@ spec:
             type: object
           status:
             properties:
-              error_msg:
+              errorMsg:
                 type: string
-              last_ended:
+              lastEnded:
                 format: int64
                 type: integer
-              last_online:
+              lastOnline:
                 format: int64
                 type: integer
-              last_register:
+              lastRegister:
                 format: int64
                 type: integer
-              last_started:
+              lastStarted:
                 format: int64
                 type: integer
-              last_update:
+              lastUpdate:
                 format: int64
                 type: integer
-              next_schedule:
+              nextSchedule:
                 format: int64
                 type: integer
               size:
@@ -1037,13 +1037,13 @@ spec:
               upstream:
                 type: string
             required:
-            - error_msg
-            - last_ended
-            - last_online
-            - last_register
-            - last_started
-            - last_update
-            - next_schedule
+            - errorMsg
+            - lastEnded
+            - lastOnline
+            - lastRegister
+            - lastStarted
+            - lastUpdate
+            - nextSchedule
             - size
             - status
             - upstream

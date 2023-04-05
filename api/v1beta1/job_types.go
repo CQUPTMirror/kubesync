@@ -80,15 +80,15 @@ const (
 
 type JobStatus struct {
 	Status       SyncStatus `json:"status"`
-	LastUpdate   int64      `json:"last_update"`
-	LastStarted  int64      `json:"last_started"`
-	LastEnded    int64      `json:"last_ended"`
-	Scheduled    int64      `json:"next_schedule"`
+	LastUpdate   int64      `json:"lastUpdate"`
+	LastStarted  int64      `json:"lastStarted"`
+	LastEnded    int64      `json:"lastEnded"`
+	Scheduled    int64      `json:"nextSchedule"`
 	Upstream     string     `json:"upstream"`
 	Size         string     `json:"size"`
-	ErrorMsg     string     `json:"error_msg"`
-	LastOnline   int64      `json:"last_online"`
-	LastRegister int64      `json:"last_register"`
+	ErrorMsg     string     `json:"errorMsg"`
+	LastOnline   int64      `json:"lastOnline"`
+	LastRegister int64      `json:"lastRegister"`
 }
 
 //+kubebuilder:object:root=true
