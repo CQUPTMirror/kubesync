@@ -18,7 +18,7 @@ spec:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: Job is the Schema for the jobs API
+        description: MirrorJob is the Schema for the jobs API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation

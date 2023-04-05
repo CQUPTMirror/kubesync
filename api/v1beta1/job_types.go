@@ -94,7 +94,7 @@ type JobStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Job is the Schema for the jobs API
+// MirrorJob is the Schema for the jobs API
 type MirrorJob struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -105,13 +105,13 @@ type MirrorJob struct {
 
 //+kubebuilder:object:root=true
 
-// JobList contains a list of Job
-type JobList struct {
+// MirrorJobList contains a list of Job
+type MirrorJobList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []MirrorJob `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MirrorJob{}, &JobList{})
+	SchemeBuilder.Register(&MirrorJob{}, &MirrorJobList{})
 }

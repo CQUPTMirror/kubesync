@@ -221,7 +221,7 @@ func (s *Manager) listAllJobs(c *gin.Context) {
 	var ws []internal.MirrorStatus
 
 	s.rwmu.RLock()
-	jobs := new(v1beta1.JobList)
+	jobs := new(v1beta1.MirrorJobList)
 	err := s.client.List(c.Request.Context(), jobs, &client.ListOptions{Namespace: s.namespace})
 	s.rwmu.RUnlock()
 
