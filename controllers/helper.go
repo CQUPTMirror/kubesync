@@ -222,6 +222,7 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 }
 
 func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (networkingv1.Ingress, error) {
+	pathType := networkingv1.PathTypePrefix
 	ingr := networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{APIVersion: networkingv1.SchemeGroupVersion.String(), Kind: "Ingress"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -237,7 +238,8 @@ func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (networkingv1.Ingres
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
 								{
-									Path: "/" + job.Name,
+									Path:     "/" + job.Name,
+									PathType: &pathType,
 									Backend: networkingv1.IngressBackend{
 										Service: &networkingv1.IngressServiceBackend{
 											Name: job.Name,

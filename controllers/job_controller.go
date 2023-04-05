@@ -79,11 +79,6 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	ingr, err := r.desiredIngress(job)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("job-controller")}
 
 	err = r.Patch(ctx, &pvc, client.Apply, applyOpts...)
@@ -106,9 +101,16 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	err = r.Patch(ctx, &ingr, client.Apply, applyOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
+	if r.Domain != "" && r.Image != "" {
+		ingr, err := r.desiredIngress(job)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = r.Patch(ctx, &ingr, client.Apply, applyOpts...)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	err = r.Status().Update(ctx, &job)
