@@ -97,9 +97,8 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            job.Name,
-							Image:           job.Spec.Deploy.Image,
-							ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
+							Name:  job.Name,
+							Image: job.Spec.Deploy.Image,
 							EnvFrom: []corev1.EnvFromSource{
 								{
 									ConfigMapRef: &corev1.ConfigMapEnvSource{
@@ -120,12 +119,6 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 							Ports: []corev1.ContainerPort{
 								{ContainerPort: 6000, Name: "api", Protocol: "TCP"},
 							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceLimitsMemory: resource.MustParse(job.Spec.Deploy.MemoryLimit),
-									corev1.ResourceLimitsCPU:    resource.MustParse(job.Spec.Deploy.CPULimit),
-								},
-							},
 						},
 					},
 					Volumes: []corev1.Volume{
@@ -138,17 +131,34 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 							},
 						},
 					},
-					ImagePullSecrets: job.Spec.Deploy.ImagePullSecrets,
-					NodeName:         job.Spec.Deploy.NodeName,
-					Affinity:         job.Spec.Deploy.Affinity,
-					Tolerations:      job.Spec.Deploy.Tolerations,
 				},
 			},
 		},
 	}
-	// if job.Spec.Deploy.ImagePullPolicy != nil {
-
-	// }
+	if job.Spec.Deploy.ImagePullPolicy != "" {
+		app.Spec.Template.Spec.Containers[0].ImagePullPolicy = job.Spec.Deploy.ImagePullPolicy
+	}
+	if job.Spec.Deploy.MemoryLimit != "" || job.Spec.Deploy.CPULimit != "" {
+		app.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
+		if job.Spec.Deploy.MemoryLimit != "" {
+			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsMemory] = resource.MustParse(job.Spec.Deploy.MemoryLimit)
+		}
+		if job.Spec.Deploy.CPULimit != "" {
+			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(job.Spec.Deploy.CPULimit)
+		}
+	}
+	if job.Spec.Deploy.ImagePullSecrets != nil {
+		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
+	}
+	if job.Spec.Deploy.NodeName != "" {
+		app.Spec.Template.Spec.NodeName = job.Spec.Deploy.NodeName
+	}
+	if job.Spec.Deploy.Affinity != nil {
+		app.Spec.Template.Spec.Affinity = job.Spec.Deploy.Affinity
+	}
+	if job.Spec.Deploy.Tolerations != nil {
+		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
+	}
 	if r.Domain != "" && r.Image != "" {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
