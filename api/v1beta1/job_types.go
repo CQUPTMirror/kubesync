@@ -57,13 +57,13 @@ type JobSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	Config JobConfig `json:"config,inline"`
+	Config JobConfig `json:"config"`
 
 	// +optional
-	Deploy DeployConfig `json:",inline"`
+	Deploy DeployConfig `json:"deploy"`
 
 	// +optional
-	Volume PVConfig `json:",inline"`
+	Volume PVConfig `json:"volume"`
 }
 
 type JobStatus struct {

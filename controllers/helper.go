@@ -40,7 +40,10 @@ func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap,
 }
 
 func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev1.PersistentVolumeClaim, error) {
-	resourceStorage, _ := resource.ParseQuantity(job.Spec.Volume.Size)
+	resourceStorage, err := resource.ParseQuantity(job.Spec.Volume.Size)
+	if err != nil {
+		panic(err)
+	}
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
 		ObjectMeta: metav1.ObjectMeta{
