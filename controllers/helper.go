@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap, error) {
+func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.MirrorJob) (corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ConfigMap"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -39,7 +39,7 @@ func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap,
 	return cm, nil
 }
 
-func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev1.PersistentVolumeClaim, error) {
+func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.MirrorJob) (corev1.PersistentVolumeClaim, error) {
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -68,7 +68,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 	return pvc, nil
 }
 
-func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deployment, error) {
+func (r *JobReconciler) desiredDeployment(job jobsv1beta1.MirrorJob) (appsv1.Deployment, error) {
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(6000)},
@@ -195,7 +195,7 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 	return app, nil
 }
 
-func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, error) {
+func (r *JobReconciler) desiredService(job jobsv1beta1.MirrorJob) (corev1.Service, error) {
 	svc := corev1.Service{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -221,7 +221,7 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 	return svc, nil
 }
 
-func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (networkingv1.Ingress, error) {
+func (r *JobReconciler) desiredIngress(job jobsv1beta1.MirrorJob) (networkingv1.Ingress, error) {
 	pathType := networkingv1.PathTypePrefix
 	ingr := networkingv1.Ingress{
 		TypeMeta: metav1.TypeMeta{APIVersion: networkingv1.SchemeGroupVersion.String(), Kind: "Ingress"},

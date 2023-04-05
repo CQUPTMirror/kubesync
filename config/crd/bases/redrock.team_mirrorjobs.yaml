@@ -5,14 +5,14 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: jobs.mirror.redrock.team
+  name: mirrorjobs.redrock.team
 spec:
-  group: mirror.redrock.team
+  group: redrock.team
   names:
-    kind: Job
-    listKind: JobList
-    plural: jobs
-    singular: job
+    kind: MirrorJob
+    listKind: MirrorJobList
+    plural: mirrorjobs
+    singular: mirrorjob
   scope: Namespaced
   versions:
   - name: v1beta1

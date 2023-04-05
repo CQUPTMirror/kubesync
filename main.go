@@ -99,7 +99,7 @@ func main() {
 		Domain: FrontDomain,
 		Image:  FrontImage,
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Job")
+		setupLog.Error(err, "unable to create controller", "controller", "MirrorJob")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

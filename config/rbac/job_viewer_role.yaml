@@ -12,16 +12,16 @@ metadata:
   name: job-viewer-role
 rules:
 - apiGroups:
-  - mirror.redrock.team
+  - redrock.team
   resources:
-  - jobs
+  - mirrorjobs
   verbs:
   - get
   - list
   - watch
 - apiGroups:
-  - mirror.redrock.team
+  - redrock.team
   resources:
-  - jobs/status
+  - mirrorjobs/status
   verbs:
   - get

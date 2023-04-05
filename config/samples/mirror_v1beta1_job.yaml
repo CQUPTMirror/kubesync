@@ -1,5 +1,5 @@
-apiVersion: mirror.redrock.team/v1beta1
-kind: Job
+apiVersion: redrock.team/v1beta1
+kind: MirrorJob
 metadata:
   labels:
     app.kubernetes.io/name: job

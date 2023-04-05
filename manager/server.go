@@ -177,8 +177,8 @@ func (s *Manager) Run(ctx context.Context) error {
 	}
 }
 
-func (m *Manager) GetJobRaw(c *gin.Context, mirrorID string) (*v1beta1.Job, error) {
-	job := new(v1beta1.Job)
+func (m *Manager) GetJobRaw(c *gin.Context, mirrorID string) (*v1beta1.MirrorJob, error) {
+	job := new(v1beta1.MirrorJob)
 	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, job)
 	if err != nil {
 		err := fmt.Errorf("failed to get mirror: %s",
@@ -209,7 +209,7 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 }
 
 func (m *Manager) CreateJob(ctx context.Context, c internal.MirrorConfig) error {
-	job := &v1beta1.Job{
+	job := &v1beta1.MirrorJob{
 		ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: m.namespace},
 		Spec:       c.JobSpec,
 	}
