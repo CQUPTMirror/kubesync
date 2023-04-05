@@ -66,6 +66,18 @@ type JobSpec struct {
 	Volume PVConfig `json:"volume"`
 }
 
+type SyncStatus string
+
+const (
+	None       SyncStatus = "none"
+	Failed     SyncStatus = "failed"
+	Success    SyncStatus = "success"
+	Syncing    SyncStatus = "syncing"
+	PreSyncing SyncStatus = "pre-syncing"
+	Paused     SyncStatus = "paused"
+	Disabled   SyncStatus = "disabled"
+)
+
 type JobStatus struct {
 	Status       SyncStatus `json:"status"`
 	LastUpdate   int64      `json:"last_update"`

@@ -1033,7 +1033,7 @@ spec:
               size:
                 type: string
               status:
-                type: integer
+                type: string
               upstream:
                 type: string
             required:
