@@ -40,10 +40,6 @@ func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap,
 }
 
 func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev1.PersistentVolumeClaim, error) {
-	resourceStorage, err := resource.ParseQuantity(job.Spec.Volume.Size)
-	if err != nil {
-		panic(err)
-	}
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -53,7 +49,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{corev1.ResourceStorage: resourceStorage},
+				Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(job.Spec.Volume.Size)},
 			},
 		},
 	}
@@ -73,9 +69,6 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 }
 
 func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deployment, error) {
-	limitMemory, _ := resource.ParseQuantity(job.Spec.Deploy.MemoryLimit)
-	limitCPU, _ := resource.ParseQuantity(job.Spec.Deploy.CPULimit)
-
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(6000)},
@@ -128,7 +121,10 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 								{ContainerPort: 6000, Name: "api", Protocol: "TCP"},
 							},
 							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{corev1.ResourceLimitsMemory: limitMemory, corev1.ResourceLimitsCPU: limitCPU},
+								Requests: corev1.ResourceList{
+									corev1.ResourceLimitsMemory: resource.MustParse(job.Spec.Deploy.MemoryLimit),
+									corev1.ResourceLimitsCPU:    resource.MustParse(job.Spec.Deploy.CPULimit),
+								},
 							},
 						},
 					},
