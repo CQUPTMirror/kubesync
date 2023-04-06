@@ -64,6 +64,7 @@ test: manifests generate fmt vet envtest ## Run tests.
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/controller main.go
 	go build -o bin/manager manager/cmd/main.go
+	go build -o bin/worker worker/cmd/main.go
 
 .PHONY: run
 run: manifests generate fmt vet ## Run a controller from your host.
