@@ -8,19 +8,18 @@ import (
 )
 
 type twoStageRsyncConfig struct {
-	name                                         string
-	rsyncCmd                                     string
-	stage1Profile                                string
-	upstreamURL, username, password, excludeFile string
-	extraOptions                                 []string
-	rsyncNeverTimeout                            bool
-	rsyncTimeoutValue                            int
-	rsyncEnv                                     map[string]string
-	workingDir, logDir, logFile                  string
-	useIPv6, useIPv4                             bool
-	interval                                     time.Duration
-	retry                                        int
-	timeout                                      time.Duration
+	name                        string
+	rsyncCmd                    string
+	stage1Profile               string
+	upstreamURL, excludeFile    string
+	extraOptions                []string
+	rsyncNeverTimeout           bool
+	rsyncTimeoutValue           int
+	workingDir, logDir, logFile string
+	useIPv6, useIPv4            bool
+	interval                    time.Duration
+	retry                       int
+	timeout                     time.Duration
 }
 
 // An RsyncProvider provides the implementation to rsync-based syncing jobs
@@ -72,15 +71,6 @@ func newTwoStageRsyncProvider(c twoStageRsyncConfig) (*twoStageRsyncProvider, er
 		},
 	}
 
-	if c.rsyncEnv == nil {
-		provider.rsyncEnv = map[string]string{}
-	}
-	if c.username != "" {
-		provider.rsyncEnv["USER"] = c.username
-	}
-	if c.password != "" {
-		provider.rsyncEnv["RSYNC_PASSWORD"] = c.password
-	}
 	if c.rsyncCmd == "" {
 		provider.rsyncCmd = "rsync"
 	}
@@ -90,10 +80,6 @@ func newTwoStageRsyncProvider(c twoStageRsyncConfig) (*twoStageRsyncProvider, er
 	provider.ctx.Set(_LogFileKey, c.logFile)
 
 	return provider, nil
-}
-
-func (p *twoStageRsyncProvider) Type() providerEnum {
-	return provTwoStageRsync
 }
 
 func (p *twoStageRsyncProvider) Upstream() string {
@@ -165,7 +151,7 @@ func (p *twoStageRsyncProvider) Run(started chan empty) error {
 		command = append(command, options...)
 		command = append(command, p.upstreamURL, p.WorkingDir())
 
-		p.cmd = newCmdJob(p, command, p.WorkingDir(), p.rsyncEnv)
+		p.cmd = newCmdJob(p, command, p.WorkingDir(), nil)
 		if err := p.prepareLogFile(stage > 1); err != nil {
 			return err
 		}

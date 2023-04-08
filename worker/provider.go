@@ -22,8 +22,6 @@ type mirrorProvider interface {
 	Name() string
 	Upstream() string
 
-	Type() providerEnum
-
 	// Start then Wait
 	Run(started chan empty) error
 	// Start the job
@@ -58,111 +56,86 @@ type mirrorProvider interface {
 }
 
 // newProvider creates a mirrorProvider instance
-// using a mirrorCfg and the global cfg
-func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
+// using the global cfg
+func newMirrorProvider(cfg *Config) mirrorProvider {
 
-	formatLogDir := func(logDir string, m mirrorConfig) string {
-		tmpl, err := template.New("logDirTmpl-" + m.Name).Parse(logDir)
+	formatLogDir := func(logDir string) string {
+		tmpl, err := template.New("logDirTmpl-" + cfg.Name).Parse(logDir)
 		if err != nil {
 			panic(err)
 		}
 		var formatedLogDir bytes.Buffer
-		tmpl.Execute(&formatedLogDir, m)
+		tmpl.Execute(&formatedLogDir, cfg)
 		return formatedLogDir.String()
 	}
 
-	logDir := mirror.LogDir
-	mirrorDir := mirror.MirrorDir
-	if logDir == "" {
-		logDir = cfg.Global.LogDir
-	}
-	if mirrorDir == "" {
-		mirrorDir = filepath.Join(
-			cfg.Global.MirrorDir, mirror.MirrorSubDir, mirror.Name,
-		)
-	}
-	if mirror.Interval == 0 {
-		mirror.Interval = cfg.Global.Interval
-	}
-	if mirror.Retry == 0 {
-		mirror.Retry = cfg.Global.Retry
-	}
-	if mirror.Timeout == 0 {
-		mirror.Timeout = cfg.Global.Timeout
-	}
-	logDir = formatLogDir(logDir, mirror)
+	mirrorDir := filepath.Join(cfg.MirrorDir, cfg.Name)
+	logDir := formatLogDir(cfg.LogDir)
 
 	var provider mirrorProvider
 
-	switch mirror.Provider {
-	case provCommand:
+	switch cfg.Provider {
+	case "command":
 		pc := cmdConfig{
-			name:        mirror.Name,
-			upstreamURL: mirror.Upstream,
-			command:     mirror.Command,
+			name:        cfg.Name,
+			upstreamURL: cfg.Upstream,
+			command:     cfg.Command,
 			workingDir:  mirrorDir,
-			failOnMatch: mirror.FailOnMatch,
-			sizePattern: mirror.SizePattern,
+			failOnMatch: cfg.FailOnMatch,
+			sizePattern: cfg.SizePattern,
 			logDir:      logDir,
 			logFile:     filepath.Join(logDir, "latest.log"),
-			interval:    time.Duration(mirror.Interval) * time.Minute,
-			retry:       mirror.Retry,
-			timeout:     time.Duration(mirror.Timeout) * time.Second,
-			env:         mirror.Env,
+			interval:    time.Duration(cfg.Interval) * time.Minute,
+			retry:       cfg.Retry,
+			timeout:     time.Duration(cfg.Timeout) * time.Second,
 		}
 		p, err := newCmdProvider(pc)
 		if err != nil {
 			panic(err)
 		}
 		provider = p
-	case provRsync:
+	case "rsync":
 		rc := rsyncConfig{
-			name:              mirror.Name,
-			upstreamURL:       mirror.Upstream,
-			rsyncCmd:          mirror.Command,
-			username:          mirror.Username,
-			password:          mirror.Password,
-			excludeFile:       mirror.ExcludeFile,
-			extraOptions:      mirror.RsyncOptions,
-			rsyncNeverTimeout: mirror.RsyncNoTimeo,
-			rsyncTimeoutValue: mirror.RsyncTimeout,
-			overriddenOptions: mirror.RsyncOverride,
-			rsyncEnv:          mirror.Env,
+			name:              cfg.Name,
+			upstreamURL:       cfg.Upstream,
+			rsyncCmd:          cfg.Command,
+			excludeFile:       cfg.ExcludeFile,
+			extraOptions:      cfg.RsyncOptions,
+			rsyncNeverTimeout: cfg.RsyncNoTimeo,
+			rsyncTimeoutValue: cfg.RsyncTimeout,
+			overriddenOptions: cfg.RsyncOverride,
 			workingDir:        mirrorDir,
 			logDir:            logDir,
 			logFile:           filepath.Join(logDir, "latest.log"),
-			useIPv6:           mirror.UseIPv6,
-			useIPv4:           mirror.UseIPv4,
-			interval:          time.Duration(mirror.Interval) * time.Minute,
-			retry:             mirror.Retry,
-			timeout:           time.Duration(mirror.Timeout) * time.Second,
+			useIPv6:           cfg.UseIPv6,
+			useIPv4:           cfg.UseIPv4,
+			interval:          time.Duration(cfg.Interval) * time.Minute,
+			retry:             cfg.Retry,
+			timeout:           time.Duration(cfg.Timeout) * time.Second,
 		}
 		p, err := newRsyncProvider(rc)
 		if err != nil {
 			panic(err)
 		}
 		provider = p
-	case provTwoStageRsync:
+	case "two-stage-rsync":
 		rc := twoStageRsyncConfig{
-			name:              mirror.Name,
-			stage1Profile:     mirror.Stage1Profile,
-			upstreamURL:       mirror.Upstream,
-			rsyncCmd:          mirror.Command,
-			username:          mirror.Username,
-			password:          mirror.Password,
-			excludeFile:       mirror.ExcludeFile,
-			extraOptions:      mirror.RsyncOptions,
-			rsyncNeverTimeout: mirror.RsyncNoTimeo,
-			rsyncTimeoutValue: mirror.RsyncTimeout,
-			rsyncEnv:          mirror.Env,
+			name:              cfg.Name,
+			stage1Profile:     cfg.Stage1Profile,
+			upstreamURL:       cfg.Upstream,
+			rsyncCmd:          cfg.Command,
+			excludeFile:       cfg.ExcludeFile,
+			extraOptions:      cfg.RsyncOptions,
+			rsyncNeverTimeout: cfg.RsyncNoTimeo,
+			rsyncTimeoutValue: cfg.RsyncTimeout,
 			workingDir:        mirrorDir,
 			logDir:            logDir,
 			logFile:           filepath.Join(logDir, "latest.log"),
-			useIPv6:           mirror.UseIPv6,
-			useIPv4:           mirror.UseIPv4,
-			interval:          time.Duration(mirror.Interval) * time.Minute,
-			retry:             mirror.Retry,
-			timeout:           time.Duration(mirror.Timeout) * time.Second,
+			useIPv6:           cfg.UseIPv6,
+			useIPv4:           cfg.UseIPv4,
+			interval:          time.Duration(cfg.Interval) * time.Minute,
+			retry:             cfg.Retry,
+			timeout:           time.Duration(cfg.Timeout) * time.Second,
 		}
 		p, err := newTwoStageRsyncProvider(rc)
 		if err != nil {
@@ -177,13 +150,13 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 	provider.AddHook(newLogLimiter(provider))
 
 	// Add ZFS Hook
-	if cfg.ZFS.Enable {
-		provider.AddHook(newZfsHook(provider, cfg.ZFS.Zpool))
+	if cfg.ZFSEnable {
+		provider.AddHook(newZfsHook(provider, cfg.Zpool))
 	}
 
 	// Add Btrfs Snapshot Hook
-	if cfg.BtrfsSnapshot.Enable {
-		provider.AddHook(newBtrfsSnapshotHook(provider, cfg.BtrfsSnapshot.SnapshotPath, mirror))
+	if cfg.BtrfsEnable {
+		provider.AddHook(newBtrfsSnapshotHook(provider, cfg.SnapshotPath))
 	}
 
 	addHookFromCmdList := func(cmdList []string, execOn uint8) {
@@ -193,7 +166,7 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 		for _, cmd := range cmdList {
 			h, err := newExecPostHook(provider, execOn, cmd)
 			if err != nil {
-				logger.Errorf("Error initializing mirror %s: %s", mirror.Name, err.Error())
+				logger.Errorf("Error initializing mirror %s: %s", cfg.Name, err.Error())
 				panic(err)
 			}
 			provider.AddHook(h)
@@ -201,12 +174,10 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 	}
 
 	// ExecOnSuccess hook
-	addHookFromCmdList(cfg.Global.ExecOnSuccess, execOnSuccess)
-	addHookFromCmdList(mirror.ExecOnSuccessExtra, execOnSuccess)
+	addHookFromCmdList(cfg.ExecOnSuccess, execOnSuccess)
 
 	// ExecOnFailure hook
-	addHookFromCmdList(cfg.Global.ExecOnFailure, execOnFailure)
-	addHookFromCmdList(mirror.ExecOnFailureExtra, execOnFailure)
+	addHookFromCmdList(cfg.ExecOnFailure, execOnFailure)
 
 	return provider
 }

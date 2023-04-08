@@ -8,19 +8,18 @@ import (
 )
 
 type rsyncConfig struct {
-	name                                         string
-	rsyncCmd                                     string
-	upstreamURL, username, password, excludeFile string
-	extraOptions                                 []string
-	overriddenOptions                            []string
-	rsyncNeverTimeout                            bool
-	rsyncTimeoutValue                            int
-	rsyncEnv                                     map[string]string
-	workingDir, logDir, logFile                  string
-	useIPv6, useIPv4                             bool
-	interval                                     time.Duration
-	retry                                        int
-	timeout                                      time.Duration
+	name                        string
+	rsyncCmd                    string
+	upstreamURL, excludeFile    string
+	extraOptions                []string
+	overriddenOptions           []string
+	rsyncNeverTimeout           bool
+	rsyncTimeoutValue           int
+	workingDir, logDir, logFile string
+	useIPv6, useIPv4            bool
+	interval                    time.Duration
+	retry                       int
+	timeout                     time.Duration
 }
 
 // An RsyncProvider provides the implementation to rsync-based syncing jobs
@@ -52,15 +51,6 @@ func newRsyncProvider(c rsyncConfig) (*rsyncProvider, error) {
 
 	if c.rsyncCmd == "" {
 		provider.rsyncCmd = "rsync"
-	}
-	if c.rsyncEnv == nil {
-		provider.rsyncEnv = map[string]string{}
-	}
-	if c.username != "" {
-		provider.rsyncEnv["USER"] = c.username
-	}
-	if c.password != "" {
-		provider.rsyncEnv["RSYNC_PASSWORD"] = c.password
 	}
 
 	options := []string{
@@ -100,10 +90,6 @@ func newRsyncProvider(c rsyncConfig) (*rsyncProvider, error) {
 	provider.ctx.Set(_LogFileKey, c.logFile)
 
 	return provider, nil
-}
-
-func (p *rsyncProvider) Type() providerEnum {
-	return provRsync
 }
 
 func (p *rsyncProvider) Upstream() string {
@@ -147,7 +133,7 @@ func (p *rsyncProvider) Start() error {
 	command = append(command, p.options...)
 	command = append(command, p.upstreamURL, p.WorkingDir())
 
-	p.cmd = newCmdJob(p, command, p.WorkingDir(), p.rsyncEnv)
+	p.cmd = newCmdJob(p, command, p.WorkingDir(), nil)
 	if err := p.prepareLogFile(false); err != nil {
 		return err
 	}

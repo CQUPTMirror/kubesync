@@ -2,48 +2,18 @@ package worker
 
 import (
 	"errors"
-	"os"
+	"strconv"
+	"strings"
 
-	"github.com/BurntSushi/toml"
 	units "github.com/docker/go-units"
 )
 
-type providerEnum uint8
-
-const (
-	provRsync providerEnum = iota
-	provTwoStageRsync
-	provCommand
-)
-
-func (p *providerEnum) UnmarshalText(text []byte) error {
-	s := string(text)
-	switch s {
-	case `command`:
-		*p = provCommand
-	case `rsync`:
-		*p = provRsync
-	case `two-stage-rsync`:
-		*p = provTwoStageRsync
-	default:
-		return errors.New("Invalid value to provierEnum")
-	}
-	return nil
-}
-
 // Config represents worker config options
 type Config struct {
-	Global        globalConfig        `toml:"global"`
-	APIBase       string              `toml:"api_base"`
-	Server        serverConfig        `toml:"server"`
-	ZFS           zfsConfig           `toml:"zfs"`
-	BtrfsSnapshot btrfsSnapshotConfig `toml:"btrfs_snapshot"`
-	Mirror        mirrorConfig        `toml:"mirror"`
-}
-
-type globalConfig struct {
 	Name       string `toml:"name"`
 	Namespace  string `toml:"namespace"`
+	Provider   string `toml:"provider"`
+	Upstream   string `toml:"upstream"`
 	LogDir     string `toml:"log_dir"`
 	MirrorDir  string `toml:"mirror_dir"`
 	Concurrent int    `toml:"concurrent"`
@@ -51,22 +21,29 @@ type globalConfig struct {
 	Retry      int    `toml:"retry"`
 	Timeout    int    `toml:"timeout"`
 
+	Command       string   `toml:"command"`
+	FailOnMatch   string   `toml:"fail_on_match"`
+	SizePattern   string   `toml:"size_pattern"`
+	UseIPv6       bool     `toml:"use_ipv6"`
+	UseIPv4       bool     `toml:"use_ipv4"`
+	ExcludeFile   string   `toml:"exclude_file"`
+	RsyncNoTimeo  bool     `toml:"rsync_no_timeout"`
+	RsyncTimeout  int      `toml:"rsync_timeout"`
+	RsyncOptions  []string `toml:"rsync_options"`
+	RsyncOverride []string `toml:"rsync_override"`
+	Stage1Profile string   `toml:"stage1_profile"`
+
 	ExecOnSuccess []string `toml:"exec_on_success"`
 	ExecOnFailure []string `toml:"exec_on_failure"`
-}
 
-type serverConfig struct {
-	Addr string `toml:"listen_addr"`
-	Port int    `toml:"listen_port"`
-}
+	APIBase string `toml:"api_base"`
+	Addr    string `toml:"listen_addr"`
+	Port    int    `toml:"listen_port"`
 
-type zfsConfig struct {
-	Enable bool   `toml:"enable"`
-	Zpool  string `toml:"zpool"`
-}
+	ZFSEnable bool   `toml:"zfs_enable"`
+	Zpool     string `toml:"zpool"`
 
-type btrfsSnapshotConfig struct {
-	Enable       bool   `toml:"enable"`
+	BtrfsEnable  bool   `toml:"btrfs_enable"`
 	SnapshotPath string `toml:"snapshot_path"`
 }
 
@@ -96,50 +73,67 @@ func (m *MemBytes) UnmarshalText(s []byte) error {
 	return err
 }
 
-type mirrorConfig struct {
-	Name         string            `toml:"name"`
-	Provider     providerEnum      `toml:"provider"`
-	Upstream     string            `toml:"upstream"`
-	Interval     int               `toml:"interval"`
-	Retry        int               `toml:"retry"`
-	Timeout      int               `toml:"timeout"`
-	MirrorDir    string            `toml:"mirror_dir"`
-	MirrorSubDir string            `toml:"mirror_subdir"`
-	LogDir       string            `toml:"log_dir"`
-	Env          map[string]string `toml:"env"`
-
-	// These two options  the global options
-	ExecOnSuccessExtra []string `toml:"exec_on_success_extra"`
-	ExecOnFailureExtra []string `toml:"exec_on_failure_extra"`
-
-	Command       string   `toml:"command"`
-	FailOnMatch   string   `toml:"fail_on_match"`
-	SizePattern   string   `toml:"size_pattern"`
-	UseIPv6       bool     `toml:"use_ipv6"`
-	UseIPv4       bool     `toml:"use_ipv4"`
-	ExcludeFile   string   `toml:"exclude_file"`
-	Username      string   `toml:"username"`
-	Password      string   `toml:"password"`
-	RsyncNoTimeo  bool     `toml:"rsync_no_timeout"`
-	RsyncTimeout  int      `toml:"rsync_timeout"`
-	RsyncOptions  []string `toml:"rsync_options"`
-	RsyncOverride []string `toml:"rsync_override"`
-	Stage1Profile string   `toml:"stage1_profile"`
-
-	SnapshotPath string `toml:"snapshot_path"`
-}
-
 // LoadConfig loads configuration
-func LoadConfig(cfgFile string) (*Config, error) {
-	if _, err := os.Stat(cfgFile); err != nil {
-		return nil, err
-	}
+func LoadConfig() (*Config, error) {
+	var err error
 
 	cfg := new(Config)
-	if _, err := toml.DecodeFile(cfgFile, cfg); err != nil {
-		logger.Errorf(err.Error())
-		return nil, err
+
+	cfg.Name = GetEnv("NAME", "")
+	cfg.Namespace = GetEnv("NAMESPACE", "")
+	cfg.Provider = GetEnv("PROVIDER", "")
+	cfg.Upstream = GetEnv("UPSTREAM", "")
+	cfg.LogDir = GetEnv("LOG_DIR", "/var/log")
+	cfg.MirrorDir = GetEnv("MIRROR_DIR", "/data")
+
+	if cfg.Name == "" || cfg.Namespace == "" || cfg.Provider == "" || cfg.Upstream == "" {
+		return cfg, errors.New("Failed to get mirror config")
 	}
+
+	cfg.Concurrent, err = strconv.Atoi(GetEnv("CONCURRENT", "3"))
+	if err != nil {
+		return cfg, err
+	}
+
+	cfg.Interval, err = strconv.Atoi(GetEnv("INTERVAL", "1440"))
+	if err != nil {
+		return cfg, err
+	}
+
+	cfg.Retry, err = strconv.Atoi(GetEnv("RETRY", "0"))
+	if err != nil {
+		return cfg, err
+	}
+
+	cfg.Timeout, err = strconv.Atoi(GetEnv("TIMEOUT", "0"))
+	if err != nil {
+		return cfg, err
+	}
+
+	cfg.Command = GetEnv("COMMAND", "")
+	cfg.FailOnMatch = GetEnv("FAIL_ON_MATCH", "")
+	cfg.SizePattern = GetEnv("SIZE_PATTERN", "")
+	cfg.UseIPv6, _ = strconv.ParseBool(GetEnv("IPV6", ""))
+	cfg.UseIPv4, _ = strconv.ParseBool(GetEnv("IPV4", ""))
+	cfg.ExcludeFile = GetEnv("EXCLUDE_FILE", "")
+	cfg.RsyncNoTimeo, _ = strconv.ParseBool(GetEnv("RSYNC_NO_TIMEOUT", ""))
+	cfg.RsyncTimeout, _ = strconv.Atoi(GetEnv("RSYNC_TIMEOUT", ""))
+	cfg.RsyncOptions = strings.Split(GetEnv("RSYNC_OPTIONS", ""), ";")
+	cfg.RsyncOverride = strings.Split(GetEnv("RSYNC_OVERRIDE", ""), ";")
+	cfg.Stage1Profile = GetEnv("STAGE1_PROFILE", "")
+
+	cfg.ExecOnSuccess = strings.Split(GetEnv("EXEC_ON_SUCCESS", ""), ";")
+	cfg.ExecOnFailure = strings.Split(GetEnv("EXEC_ON_FAILURE", ""), ";")
+
+	cfg.APIBase = GetEnv("API", "")
+	cfg.Addr = GetEnv("ADDR", "")
+	cfg.Port, _ = strconv.Atoi(GetEnv("PORT", "6000"))
+
+	cfg.ZFSEnable, _ = strconv.ParseBool(GetEnv("ZFS", ""))
+	cfg.Zpool = GetEnv("ZPOOL", "")
+
+	cfg.BtrfsEnable, _ = strconv.ParseBool(GetEnv("BTRFS", ""))
+	cfg.SnapshotPath = GetEnv("SNAPSHOT_PATH", "")
 
 	return cfg, nil
 }

@@ -18,11 +18,8 @@ type btrfsSnapshotHook struct {
 
 // the user who runs the jobs (typically `tunasync`) should be granted the permission to run btrfs commands
 // TODO: check if the filesystem is Btrfs
-func newBtrfsSnapshotHook(provider mirrorProvider, snapshotPath string, mirror mirrorConfig) *btrfsSnapshotHook {
-	mirrorSnapshotPath := mirror.SnapshotPath
-	if mirrorSnapshotPath == "" {
-		mirrorSnapshotPath = filepath.Join(snapshotPath, provider.Name())
-	}
+func newBtrfsSnapshotHook(provider mirrorProvider, snapshotPath string) *btrfsSnapshotHook {
+	mirrorSnapshotPath := filepath.Join(snapshotPath, provider.Name())
 	return &btrfsSnapshotHook{
 		provider:           provider,
 		mirrorSnapshotPath: mirrorSnapshotPath,

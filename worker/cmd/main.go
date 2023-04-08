@@ -20,7 +20,7 @@ var logger = logging.MustGetLogger("tunasync")
 func startWorker(c *cli.Context) error {
 	gin.SetMode(gin.ReleaseMode)
 
-	cfg, err := worker.LoadConfig(c.String("config"))
+	cfg, err := worker.LoadConfig()
 	if err != nil {
 		logger.Errorf("Error loading config: %s", err.Error())
 		os.Exit(1)
@@ -80,10 +80,6 @@ func main() {
 			Usage:   "start the tunasync worker",
 			Action:  startWorker,
 			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "config, c",
-					Usage: "Load worker configurations from `FILE`",
-				},
 				cli.BoolFlag{
 					Name:  "verbose, v",
 					Usage: "Enable verbose logging",

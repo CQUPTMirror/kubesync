@@ -16,7 +16,6 @@ type cmdConfig struct {
 	interval                    time.Duration
 	retry                       int
 	timeout                     time.Duration
-	env                         map[string]string
 	failOnMatch                 string
 	sizePattern                 string
 }
@@ -75,10 +74,6 @@ func newCmdProvider(c cmdConfig) (*cmdProvider, error) {
 	return provider, nil
 }
 
-func (p *cmdProvider) Type() providerEnum {
-	return provCommand
-}
-
 func (p *cmdProvider) Upstream() string {
 	return p.upstreamURL
 }
@@ -128,9 +123,6 @@ func (p *cmdProvider) Start() error {
 		"TUNASYNC_UPSTREAM_URL": p.upstreamURL,
 		"TUNASYNC_LOG_DIR":      p.LogDir(),
 		"TUNASYNC_LOG_FILE":     p.LogFile(),
-	}
-	for k, v := range p.env {
-		env[k] = v
 	}
 	p.cmd = newCmdJob(p, p.command, p.WorkingDir(), env)
 	if err := p.prepareLogFile(false); err != nil {

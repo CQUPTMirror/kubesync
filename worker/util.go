@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"os/exec"
 	"regexp"
 	"time"
@@ -125,4 +126,12 @@ func TranslateRsyncErrorCode(cmdErr error) (exitCode int, msg string) {
 		}
 	}
 	return
+}
+
+func GetEnv(key, def string) string {
+	val, ex := os.LookupEnv(key)
+	if !ex {
+		return def
+	}
+	return val
 }

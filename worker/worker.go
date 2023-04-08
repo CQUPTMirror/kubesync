@@ -29,15 +29,15 @@ type Worker struct {
 // NewTUNASyncWorker creates a worker
 func NewTUNASyncWorker(cfg *Config) *Worker {
 
-	if cfg.Global.Retry == 0 {
-		cfg.Global.Retry = defaultMaxRetry
+	if cfg.Retry == 0 {
+		cfg.Retry = defaultMaxRetry
 	}
 
 	w := &Worker{
 		cfg: cfg,
 
 		managerChan: make(chan jobMessage, 32),
-		semaphore:   make(chan empty, cfg.Global.Concurrent),
+		semaphore:   make(chan empty, cfg.Concurrent),
 		exit:        make(chan empty),
 
 		schedule: newScheduleQueue(),
@@ -69,7 +69,7 @@ func (w *Worker) Halt() {
 }
 
 func (w *Worker) initJobs() {
-	provider := newMirrorProvider(w.cfg.Mirror, w.cfg)
+	provider := newMirrorProvider(w.cfg)
 	w.job = newMirrorJob(provider)
 }
 
@@ -130,7 +130,7 @@ func (w *Worker) makeHTTPServer() {
 }
 
 func (w *Worker) runHTTPServer() {
-	addr := fmt.Sprintf("%s:%d", w.cfg.Server.Addr, w.cfg.Server.Port)
+	addr := fmt.Sprintf("%s:%d", w.cfg.Addr, w.cfg.Port)
 
 	httpServer := &http.Server{
 		Addr:         addr,
@@ -238,18 +238,18 @@ func (w *Worker) runSchedule() {
 
 // Name returns worker name
 func (w *Worker) Name() string {
-	return w.cfg.Global.Name
+	return w.cfg.Name
 }
 
 // URL returns the url to http server of the worker
 func (w *Worker) URL() string {
-	return fmt.Sprintf("http://%s:%d/", w.cfg.Server.Addr, w.cfg.Server.Port)
+	return fmt.Sprintf("http://%s:%d/", w.cfg.Addr, w.cfg.Port)
 }
 
 func (w *Worker) registerWorker() {
 	msg := MirrorStatus{MirrorBase: MirrorBase{ID: w.Name()}}
 
-	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.cfg.Global.Namespace)
+	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.cfg.Namespace)
 	logger.Debugf("register on manager url: %s", url)
 	for retry := 10; retry > 0; {
 		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -268,7 +268,7 @@ func (w *Worker) registerWorker() {
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
 	smsg := MirrorStatus{
-		MirrorBase: MirrorBase{ID: w.cfg.Global.Name},
+		MirrorBase: MirrorBase{ID: w.cfg.Name},
 		JobStatus:  JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
 	}
 
@@ -279,7 +279,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	}
 
 	url := fmt.Sprintf(
-		"%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name(),
+		"%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
 	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
@@ -298,7 +298,7 @@ func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
 	msg := MirrorSchedules{Schedules: s}
 
 	url := fmt.Sprintf(
-		"%s/jobs/%s/%s/schedules", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name(),
+		"%s/jobs/%s/%s/schedules", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
 	if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -309,7 +309,7 @@ func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
 func (w *Worker) fetchJobStatus() []MirrorStatus {
 	var mirrorList []MirrorStatus
 
-	url := fmt.Sprintf("%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name())
+	url := fmt.Sprintf("%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Namespace, w.Name())
 
 	if _, err := GetJSON(url, &mirrorList, w.httpClient); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())
