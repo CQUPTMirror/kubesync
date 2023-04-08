@@ -92,15 +92,6 @@ func main() {
 					Name:  "debug",
 					Usage: "Run worker in debug mode",
 				},
-				cli.BoolFlag{
-					Name:  "with-systemd",
-					Usage: "Enable systemd-compatible logging",
-				},
-				cli.StringFlag{
-					Name:  "pidfile",
-					Value: "/run/tunasync/tunasync.worker.pid",
-					Usage: "The pid file of the worker process",
-				},
 				cli.StringFlag{
 					Name:  "prof-path",
 					Value: "",

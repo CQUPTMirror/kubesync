@@ -69,11 +69,8 @@ func (w *Worker) Halt() {
 }
 
 func (w *Worker) initJobs() {
-	for _, mirror := range w.cfg.Mirrors {
-		// Create Provider
-		provider := newMirrorProvider(mirror, w.cfg)
-		w.job = newMirrorJob(provider)
-	}
+	provider := newMirrorProvider(w.cfg.Mirror, w.cfg)
+	w.job = newMirrorJob(provider)
 }
 
 // Ctrl server receives commands from the manager
@@ -142,14 +139,8 @@ func (w *Worker) runHTTPServer() {
 		WriteTimeout: 10 * time.Second,
 	}
 
-	if w.cfg.Server.SSLCert == "" && w.cfg.Server.SSLKey == "" {
-		if err := httpServer.ListenAndServe(); err != nil {
-			panic(err)
-		}
-	} else {
-		if err := httpServer.ListenAndServeTLS(w.cfg.Server.SSLCert, w.cfg.Server.SSLKey); err != nil {
-			panic(err)
-		}
+	if err := httpServer.ListenAndServe(); err != nil {
+		panic(err)
 	}
 }
 
@@ -252,31 +243,24 @@ func (w *Worker) Name() string {
 
 // URL returns the url to http server of the worker
 func (w *Worker) URL() string {
-	proto := "https"
-	if w.cfg.Server.SSLCert == "" && w.cfg.Server.SSLKey == "" {
-		proto = "http"
-	}
-
-	return fmt.Sprintf("%s://%s:%d/", proto, w.cfg.Server.Hostname, w.cfg.Server.Port)
+	return fmt.Sprintf("http://%s:%d/", w.cfg.Server.Addr, w.cfg.Server.Port)
 }
 
 func (w *Worker) registerWorker() {
 	msg := MirrorStatus{MirrorBase: MirrorBase{ID: w.Name()}}
 
-	for _, root := range w.cfg.Manager.APIBaseList() {
-		url := fmt.Sprintf("%s/jobs", root)
-		logger.Debugf("register on manager url: %s", url)
-		for retry := 10; retry > 0; {
-			if _, err := PostJSON(url, msg, w.httpClient); err != nil {
-				logger.Errorf("Failed to register worker")
-				retry--
-				if retry > 0 {
-					time.Sleep(1 * time.Second)
-					logger.Noticef("Retrying... (%d)", retry)
-				}
-			} else {
-				break
+	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.cfg.Global.Namespace)
+	logger.Debugf("register on manager url: %s", url)
+	for retry := 10; retry > 0; {
+		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
+			logger.Errorf("Failed to register worker")
+			retry--
+			if retry > 0 {
+				time.Sleep(1 * time.Second)
+				logger.Noticef("Retrying... (%d)", retry)
 			}
+		} else {
+			break
 		}
 	}
 }
@@ -294,14 +278,12 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		smsg.Size = job.size
 	}
 
-	for _, root := range w.cfg.Manager.APIBaseList() {
-		url := fmt.Sprintf(
-			"%s/jobs/%s", root, w.Name(),
-		)
-		logger.Debugf("reporting on manager url: %s", url)
-		if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
-			logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
-		}
+	url := fmt.Sprintf(
+		"%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name(),
+	)
+	logger.Debugf("reporting on manager url: %s", url)
+	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
+		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
 }
 
@@ -315,22 +297,19 @@ func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
 	}
 	msg := MirrorSchedules{Schedules: s}
 
-	for _, root := range w.cfg.Manager.APIBaseList() {
-		url := fmt.Sprintf(
-			"%s/jobs/%s/schedules", root, w.Name(),
-		)
-		logger.Debugf("reporting on manager url: %s", url)
-		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
-			logger.Errorf("Failed to upload schedules: %s", err.Error())
-		}
+	url := fmt.Sprintf(
+		"%s/jobs/%s/%s/schedules", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name(),
+	)
+	logger.Debugf("reporting on manager url: %s", url)
+	if _, err := PostJSON(url, msg, w.httpClient); err != nil {
+		logger.Errorf("Failed to upload schedules: %s", err.Error())
 	}
 }
 
 func (w *Worker) fetchJobStatus() []MirrorStatus {
 	var mirrorList []MirrorStatus
-	apiBase := w.cfg.Manager.APIBaseList()[0]
 
-	url := fmt.Sprintf("%s/jobs/%s", apiBase, w.Name())
+	url := fmt.Sprintf("%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Global.Namespace, w.Name())
 
 	if _, err := GetJSON(url, &mirrorList, w.httpClient); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())

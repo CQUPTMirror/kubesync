@@ -201,19 +201,11 @@ func newMirrorProvider(mirror mirrorConfig, cfg *Config) mirrorProvider {
 	}
 
 	// ExecOnSuccess hook
-	if len(mirror.ExecOnSuccess) > 0 {
-		addHookFromCmdList(mirror.ExecOnSuccess, execOnSuccess)
-	} else {
-		addHookFromCmdList(cfg.Global.ExecOnSuccess, execOnSuccess)
-	}
+	addHookFromCmdList(cfg.Global.ExecOnSuccess, execOnSuccess)
 	addHookFromCmdList(mirror.ExecOnSuccessExtra, execOnSuccess)
 
 	// ExecOnFailure hook
-	if len(mirror.ExecOnFailure) > 0 {
-		addHookFromCmdList(mirror.ExecOnFailure, execOnFailure)
-	} else {
-		addHookFromCmdList(cfg.Global.ExecOnFailure, execOnFailure)
-	}
+	addHookFromCmdList(cfg.Global.ExecOnFailure, execOnFailure)
 	addHookFromCmdList(mirror.ExecOnFailureExtra, execOnFailure)
 
 	return provider
