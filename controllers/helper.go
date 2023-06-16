@@ -3,7 +3,7 @@ package controllers
 import (
 	"strconv"
 
-	jobsv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
+	jobsv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"

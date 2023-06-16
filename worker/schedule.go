@@ -33,16 +33,16 @@ func newScheduleQueue() *scheduleQueue {
 	return queue
 }
 
-func (q *scheduleQueue) GetJobs() (jobs []jobScheduleInfo) {
+func (q *scheduleQueue) GetJob() (job jobScheduleInfo) {
 	cur := q.list.Iterator()
 	defer cur.Close()
 
 	for cur.Next() {
 		cj := cur.Value().(*mirrorJob)
-		jobs = append(jobs, jobScheduleInfo{
+		job = jobScheduleInfo{
 			cj.Name(),
 			cur.Key().(time.Time),
-		})
+		}
 	}
 	return
 }

@@ -929,6 +929,10 @@ spec:
                     type: object
                   cpuLimit:
                     type: string
+                  env:
+                    additionalProperties:
+                      type: string
+                    type: object
                   image:
                     type: string
                   imagePullPolicy:
@@ -992,6 +996,7 @@ spec:
                       type: object
                     type: array
                 required:
+                - env
                 - image
                 type: object
               volume:

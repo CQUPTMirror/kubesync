@@ -2,13 +2,13 @@ package worker
 
 import (
 	"fmt"
+	"github.com/CQUPTMirror/kubesync/api/v1beta1"
+	"github.com/CQUPTMirror/kubesync/internal"
 	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	. "github.com/ztelliot/kubesync/api/v1beta1"
-	. "github.com/ztelliot/kubesync/internal"
 )
 
 // A Worker is a instance of tunasync worker
@@ -82,7 +82,7 @@ func (w *Worker) makeHTTPServer() {
 		w.L.Lock()
 		defer w.L.Unlock()
 
-		var cmd ClientCmd
+		var cmd internal.ClientCmd
 
 		if err := c.BindJSON(&cmd); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"msg": "Invalid request"})
@@ -97,27 +97,27 @@ func (w *Worker) makeHTTPServer() {
 
 		// if job disabled, start them first
 		switch cmd.Cmd {
-		case CmdStart, CmdRestart:
+		case internal.CmdStart, internal.CmdRestart:
 			if w.job.State() == stateDisabled {
 				go w.job.Run(w.managerChan, w.semaphore)
 			}
 		}
 		switch cmd.Cmd {
-		case CmdStart:
+		case internal.CmdStart:
 			if cmd.Force {
 				w.job.ctrlChan <- jobForceStart
 			} else {
 				w.job.ctrlChan <- jobStart
 			}
-		case CmdRestart:
+		case internal.CmdRestart:
 			w.job.ctrlChan <- jobRestart
-		case CmdStop:
+		case internal.CmdStop:
 			// if job is disabled, no goroutine would be there
 			// receiving this signal
 			if w.job.State() != stateDisabled {
 				w.job.ctrlChan <- jobStop
 			}
-		case CmdPing:
+		case internal.CmdPing:
 			// empty
 		default:
 			c.JSON(http.StatusNotAcceptable, gin.H{"msg": "Invalid Command"})
@@ -154,10 +154,10 @@ func (w *Worker) runSchedule() {
 	// if it's disabled, ignore it
 	for _, m := range mirrorList {
 		switch m.Status {
-		case Disabled:
+		case v1beta1.Disabled:
 			w.job.SetState(stateDisabled)
 			continue
-		case Paused:
+		case v1beta1.Paused:
 			w.job.SetState(statePaused)
 			go w.job.Run(w.managerChan, w.semaphore)
 			continue
@@ -178,7 +178,7 @@ func (w *Worker) runSchedule() {
 
 	w.L.Unlock()
 
-	schedInfo := w.schedule.GetJobs()
+	schedInfo := w.schedule.GetJob()
 	w.updateSchedInfo(schedInfo)
 
 	tick := time.Tick(5 * time.Second)
@@ -209,7 +209,7 @@ func (w *Worker) runSchedule() {
 				w.schedule.AddJob(schedTime.Unix(), w.job)
 			}
 
-			schedInfo = w.schedule.GetJobs()
+			schedInfo = w.schedule.GetJob()
 			w.updateSchedInfo(schedInfo)
 
 		case <-tick:
@@ -225,7 +225,7 @@ func (w *Worker) runSchedule() {
 				select {
 				case jobMsg := <-w.managerChan:
 					logger.Debugf("status update from %s", w.Name())
-					if jobMsg.status == Failed || jobMsg.status == Success {
+					if jobMsg.status == v1beta1.Failed || jobMsg.status == v1beta1.Success {
 						w.updateStatus(w.job, jobMsg)
 					}
 				default:
@@ -247,7 +247,7 @@ func (w *Worker) URL() string {
 }
 
 func (w *Worker) registerWorker() {
-	msg := MirrorStatus{MirrorBase: MirrorBase{ID: w.Name()}}
+	msg := internal.MirrorStatus{MirrorBase: internal.MirrorBase{ID: w.Name()}}
 
 	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.cfg.Namespace)
 	logger.Debugf("register on manager url: %s", url)
@@ -267,9 +267,9 @@ func (w *Worker) registerWorker() {
 
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
-	smsg := MirrorStatus{
-		MirrorBase: MirrorBase{ID: w.cfg.Name},
-		JobStatus:  JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
+	smsg := internal.MirrorStatus{
+		MirrorBase: internal.MirrorBase{ID: w.cfg.Name},
+		JobStatus:  v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
 	}
 
 	// Certain Providers (rsync for example) may know the size of mirror,
@@ -287,27 +287,23 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	}
 }
 
-func (w *Worker) updateSchedInfo(schedInfo []jobScheduleInfo) {
-	var s []MirrorSchedule
-	for _, sched := range schedInfo {
-		s = append(s, MirrorSchedule{
-			MirrorBase:   MirrorBase{ID: sched.jobName},
-			NextSchedule: sched.nextScheduled.Unix(),
-		})
+func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
+	msg := internal.MirrorSchedule{
+		MirrorBase:   internal.MirrorBase{ID: sched.jobName},
+		NextSchedule: sched.nextScheduled.Unix(),
 	}
-	msg := MirrorSchedules{Schedules: s}
 
 	url := fmt.Sprintf(
-		"%s/jobs/%s/%s/schedules", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
+		"%s/jobs/%s/%s/schedule", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
 	if _, err := PostJSON(url, msg, w.httpClient); err != nil {
-		logger.Errorf("Failed to upload schedules: %s", err.Error())
+		logger.Errorf("Failed to upload schedule: %s", err.Error())
 	}
 }
 
-func (w *Worker) fetchJobStatus() []MirrorStatus {
-	var mirrorList []MirrorStatus
+func (w *Worker) fetchJobStatus() []internal.MirrorStatus {
+	var mirrorList []internal.MirrorStatus
 
 	url := fmt.Sprintf("%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Namespace, w.Name())
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2023 ztelliot.
+Copyright 2023 CQUPTMirror.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	mirrorv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
+	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
 // JobReconciler reconciles a Job object

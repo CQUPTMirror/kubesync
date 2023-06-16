@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/CQUPTMirror/kubesync/api/v1beta1"
+	"github.com/CQUPTMirror/kubesync/internal"
 	"github.com/gin-gonic/gin"
-	"github.com/ztelliot/kubesync/api/v1beta1"
-	"github.com/ztelliot/kubesync/internal"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -125,7 +125,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		// post job status
 		mirrorValidateGroup.POST("", s.updateJob)
 		mirrorValidateGroup.POST("size", s.updateMirrorSize)
-		mirrorValidateGroup.POST("schedules", s.updateSchedules)
+		mirrorValidateGroup.POST("schedule", s.updateSchedule)
 		mirrorValidateGroup.POST("disable", s.disableJob)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST("cmd", s.handleClientCmd)
@@ -353,51 +353,50 @@ func (s *Manager) returnErrJSON(c *gin.Context, code int, err error) {
 	})
 }
 
-func (s *Manager) updateSchedules(c *gin.Context) {
-	var schedules internal.MirrorSchedules
-	c.BindJSON(&schedules)
-
-	for _, schedule := range schedules.Schedules {
-		mirrorID := schedule.ID
-		namespace := schedule.Namespace
-		if len(mirrorID) == 0 || len(namespace) == 0 {
-			s.returnErrJSON(
-				c, http.StatusBadRequest,
-				errors.New("Mirror Name should not be empty"),
-			)
-		}
-
-		s.rwmu.Lock()
-		curStatus, err := s.GetJob(c, namespace, mirrorID)
-		s.rwmu.Unlock()
-
-		if err != nil {
-			runLog.Error(err, "failed to get job %s: %s",
-				mirrorID, err.Error(),
-			)
-			continue
-		}
-
-		if curStatus.Scheduled == schedule.NextSchedule {
-			// no changes, skip update
-			continue
-		}
-
-		curStatus.Scheduled = schedule.NextSchedule
-		s.rwmu.Lock()
-		err = s.UpdateJobStatus(c, curStatus)
-		s.rwmu.Unlock()
-
-		if err != nil {
-			err := fmt.Errorf("failed to update job %s: %s",
-				mirrorID, err.Error(),
-			)
-			c.Error(err)
-			s.returnErrJSON(c, http.StatusInternalServerError, err)
-			return
-		}
-	}
+func (s *Manager) updateSchedule(c *gin.Context) {
 	type empty struct{}
+
+	var schedule internal.MirrorSchedule
+	c.BindJSON(&schedule)
+
+	mirrorID := schedule.ID
+	namespace := schedule.Namespace
+	if len(mirrorID) == 0 || len(namespace) == 0 {
+		s.returnErrJSON(
+			c, http.StatusBadRequest,
+			errors.New("Mirror Name should not be empty"),
+		)
+	}
+
+	s.rwmu.Lock()
+	curStatus, err := s.GetJob(c, namespace, mirrorID)
+	s.rwmu.Unlock()
+
+	if err != nil {
+		runLog.Error(err, "failed to get job %s: %s",
+			mirrorID, err.Error(),
+		)
+		c.JSON(http.StatusOK, empty{})
+	}
+
+	if curStatus.Scheduled == schedule.NextSchedule {
+		// no changes, skip update
+		c.JSON(http.StatusOK, empty{})
+	}
+
+	curStatus.Scheduled = schedule.NextSchedule
+	s.rwmu.Lock()
+	err = s.UpdateJobStatus(c, curStatus)
+	s.rwmu.Unlock()
+
+	if err != nil {
+		err := fmt.Errorf("failed to update job %s: %s",
+			mirrorID, err.Error(),
+		)
+		c.Error(err)
+		s.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
 	c.JSON(http.StatusOK, empty{})
 }
 

@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/ztelliot/kubesync/api/v1beta1"
+	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
 type MirrorBase struct {
 	ID        string `json:"id"`
+	Name      string `json:"name"`
 	Namespace string `json:"namespace"`
 }
 
@@ -24,10 +25,6 @@ type MirrorConfig struct {
 	MirrorBase
 
 	v1beta1.JobSpec
-}
-
-type MirrorSchedules struct {
-	Schedules []MirrorSchedule `json:"schedules"`
 }
 
 type MirrorSchedule struct {

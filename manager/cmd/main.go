@@ -1,5 +1,5 @@
 /*
-Copyright 2023 ztelliot.
+Copyright 2023 CQUPTMirror.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,8 +30,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	mirrorv1beta1 "github.com/ztelliot/kubesync/api/v1beta1"
-	"github.com/ztelliot/kubesync/manager"
+	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
+	"github.com/CQUPTMirror/kubesync/manager"
 	//+kubebuilder:scaffold:imports
 )
 

@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 	"gopkg.in/op/go-logging.v1"
 
-	"github.com/ztelliot/kubesync/worker"
+	"github.com/CQUPTMirror/kubesync/worker"
 )
 
 var logger = logging.MustGetLogger("tunasync")

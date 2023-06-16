@@ -3,11 +3,10 @@ package worker
 import (
 	"errors"
 	"fmt"
+	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	kubesync "github.com/ztelliot/kubesync/api/v1beta1"
 )
 
 // this file contains the workflow of a mirror jb
@@ -25,7 +24,7 @@ const (
 )
 
 type jobMessage struct {
-	status   kubesync.SyncStatus
+	status   v1beta1.SyncStatus
 	msg      string
 	schedule bool
 }
@@ -112,7 +111,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 					hookname, m.Name(), err.Error(),
 				)
 				managerChan <- jobMessage{
-					kubesync.Failed,
+					v1beta1.Failed,
 					fmt.Sprintf("error exec hook %s: %s", hookname, err.Error()),
 					true,
 				}
@@ -125,7 +124,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 	runJobWrapper := func(kill <-chan empty, jobDone chan<- empty) error {
 		defer close(jobDone)
 
-		managerChan <- jobMessage{kubesync.PreSyncing, "", false}
+		managerChan <- jobMessage{v1beta1.PreSyncing, "", false}
 		logger.Noticef("start syncing: %s", m.Name())
 
 		Hooks := provider.Hooks()
@@ -152,7 +151,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 			}
 
 			// start syncing
-			managerChan <- jobMessage{kubesync.Syncing, "", false}
+			managerChan <- jobMessage{v1beta1.Syncing, "", false}
 
 			var syncErr error
 			syncDone := make(chan error, 1)
@@ -223,12 +222,12 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 			if syncErr == nil {
 				// syncing success
 				m.size = provider.DataSize()
-				managerChan <- jobMessage{kubesync.Success, "", (m.State() == stateReady)}
+				managerChan <- jobMessage{v1beta1.Success, "", (m.State() == stateReady)}
 				return nil
 			}
 
 			// syncing failed
-			managerChan <- jobMessage{kubesync.Failed, syncErr.Error(), (retry == provider.Retry()-1) && (m.State() == stateReady)}
+			managerChan <- jobMessage{v1beta1.Failed, syncErr.Error(), (retry == provider.Retry()-1) && (m.State() == stateReady)}
 
 			// gracefully exit
 			if stopASAP {
