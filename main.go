@@ -93,11 +93,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	f := controllers.FrontConfig{}
+	if FrontDomain != "" && FrontImage != "" {
+		f.Enable = true
+		f.Domain = FrontDomain
+		f.Image = FrontImage
+	}
+
 	if err = (&controllers.JobReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Domain: FrontDomain,
-		Image:  FrontImage,
+		Config: controllers.ControllerConfig{Front: f},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "MirrorJob")
 		os.Exit(1)

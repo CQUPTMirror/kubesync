@@ -30,12 +30,21 @@ import (
 	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
+type FrontConfig struct {
+	Enable bool
+	Domain string
+	Image  string
+}
+
+type ControllerConfig struct {
+	Front FrontConfig
+}
+
 // JobReconciler reconciles a Job object
 type JobReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Domain string
-	Image  string
+	Config ControllerConfig
 }
 
 //+kubebuilder:rbac:groups=redrock.team,resources=mirrorjobs,verbs=get;list;watch;create;update;patch;delete
@@ -101,7 +110,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	if r.Domain != "" && r.Image != "" {
+	if r.Config.Front.Enable {
 		ingr, err := r.desiredIngress(job)
 		if err != nil {
 			return ctrl.Result{}, err

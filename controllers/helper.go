@@ -159,7 +159,7 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.MirrorJob) (appsv1.Dep
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	if r.Domain != "" && r.Image != "" {
+	if r.Config.Front.Enable {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(80)},
@@ -172,7 +172,7 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.MirrorJob) (appsv1.Dep
 		}
 		frontContainer := corev1.Container{
 			Name:            job.Name + "-front",
-			Image:           r.Image,
+			Image:           r.Config.Front.Image,
 			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
 			LivenessProbe:   frontProbe,
 			ReadinessProbe:  frontProbe,
@@ -211,7 +211,7 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.MirrorJob) (corev1.Servic
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	if r.Domain != "" && r.Image != "" {
+	if r.Config.Front.Enable {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: 80, Protocol: "TCP", TargetPort: intstr.FromInt(80)})
 	}
 
@@ -233,7 +233,7 @@ func (r *JobReconciler) desiredIngress(job jobsv1beta1.MirrorJob) (networkingv1.
 		Spec: networkingv1.IngressSpec{
 			Rules: []networkingv1.IngressRule{
 				{
-					Host: r.Domain,
+					Host: r.Config.Front.Domain,
 					IngressRuleValue: networkingv1.IngressRuleValue{
 						HTTP: &networkingv1.HTTPIngressRuleValue{
 							Paths: []networkingv1.HTTPIngressPath{
