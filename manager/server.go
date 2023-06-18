@@ -33,8 +33,8 @@ var (
 )
 
 type Options struct {
-	Scheme *runtime.Scheme
-	Port   int
+	Scheme  *runtime.Scheme
+	Address string
 }
 
 type Manager struct {
@@ -45,7 +45,7 @@ type Manager struct {
 	started    bool
 	internal   context.Context
 	cache      cache.Cache
-	port       int
+	address    string
 	rwmu       sync.RWMutex
 }
 
@@ -92,7 +92,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		client:   client,
 		internal: context.Background(),
 		cache:    cc,
-		port:     options.Port,
+		address:  options.Address,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -137,7 +137,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 func (m *Manager) Start(ctx context.Context) error {
 	m.waitForCache()
 
-	runLog.Info("Run tunasync manager server.")
+	runLog.Info("Tunasync manager server is starting to listen " + m.address)
 
 	go func() {
 		if err := m.Run(m.internal); err != nil {
@@ -169,7 +169,7 @@ func (m *Manager) waitForCache() {
 // Run runs the manager server forever
 func (s *Manager) Run(ctx context.Context) error {
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%d", s.port),
+		Addr:         s.address,
 		Handler:      s.engine,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,

@@ -130,10 +130,8 @@ func (w *Worker) makeHTTPServer() {
 }
 
 func (w *Worker) runHTTPServer() {
-	addr := fmt.Sprintf("%s:%d", w.cfg.Addr, w.cfg.Port)
-
 	httpServer := &http.Server{
-		Addr:         addr,
+		Addr:         w.cfg.Addr,
 		Handler:      w.httpEngine,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -239,11 +237,6 @@ func (w *Worker) runSchedule() {
 // Name returns worker name
 func (w *Worker) Name() string {
 	return w.cfg.Name
-}
-
-// URL returns the url to http server of the worker
-func (w *Worker) URL() string {
-	return fmt.Sprintf("http://%s:%d/", w.cfg.Addr, w.cfg.Port)
 }
 
 func (w *Worker) registerWorker() {

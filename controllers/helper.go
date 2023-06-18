@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"strconv"
 
 	jobsv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
@@ -22,14 +23,19 @@ func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.MirrorJob) (corev1.Conf
 			Labels:    map[string]string{"job": job.Name},
 		},
 		Data: map[string]string{
-			"UPSTREAM":        job.Spec.Config.Upstream,
-			"PROVIDER":        job.Spec.Config.Provider,
-			"COMMAND":         job.Spec.Config.Command,
-			"CONCURRENT":      strconv.Itoa(job.Spec.Config.Concurrent),
-			"INTERVAL":        strconv.Itoa(job.Spec.Config.Interval),
-			"RSYNCOPTIONS":    job.Spec.Config.RsyncOptions,
-			"SIZEPATTERN":     job.Spec.Config.SizePattern,
-			"ADDITIONOPTIONS": job.Spec.Config.AdditionOptions,
+			"NAME":             job.Name,
+			"NAMESPACE":        job.Namespace,
+			"PROVIDER":         job.Spec.Config.Provider,
+			"UPSTREAM":         job.Spec.Config.Upstream,
+			"CONCURRENT":       strconv.Itoa(job.Spec.Config.Concurrent),
+			"INTERVAL":         strconv.Itoa(job.Spec.Config.Interval),
+			"RETRY":            strconv.Itoa(job.Spec.Config.Retry),
+			"TIMEOUT":          strconv.Itoa(job.Spec.Config.Timeout),
+			"COMMAND":          job.Spec.Config.Command,
+			"SIZE_PATTERN":     job.Spec.Config.SizePattern,
+			"RSYNC_OPTIONS":    job.Spec.Config.RsyncOptions,
+			"ADDITION_OPTIONS": job.Spec.Config.AdditionOptions,
+			"API":              fmt.Sprintf("http://%s:3000", job.Spec.Config.Manager),
 		},
 	}
 

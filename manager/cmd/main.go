@@ -48,8 +48,8 @@ func init() {
 }
 
 func main() {
-	var apiPort int
-	flag.IntVar(&apiPort, "port", 3000, "The port the api endpoint binds to.")
+	var apiAddr string
+	flag.StringVar(&apiAddr, "port", ":3000", "The port the api endpoint binds to.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -59,8 +59,8 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := manager.GetTUNASyncManager(ctrl.GetConfigOrDie(), manager.Options{
-		Scheme: scheme,
-		Port:   apiPort,
+		Scheme:  scheme,
+		Address: apiAddr,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start api service")

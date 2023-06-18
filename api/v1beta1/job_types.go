@@ -22,11 +22,15 @@ import (
 )
 
 type JobConfig struct {
+	Name            string `json:"name"`
+	Manager         string `json:"manager"`
 	Upstream        string `json:"upstream"`
 	Provider        string `json:"provider"`
 	Command         string `json:"command,omitempty"`
 	Concurrent      int    `json:"concurrent,omitempty"`
 	Interval        int    `json:"interval,omitempty"`
+	Retry           int    `json:"retry,omitempty"`
+	Timeout         int    `json:"timeout,omitempty"`
 	RsyncOptions    string `json:"rsync_options,omitempty"`
 	SizePattern     string `json:"size_pattern,omitempty"`
 	AdditionOptions string `json:"addition_options,omitempty"`

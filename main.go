@@ -52,15 +52,11 @@ func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
-	var FrontDomain string
-	var FrontImage string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&FrontDomain, "front-domain", "", "The domain the mirror front use, let null will disable auto front.")
-	flag.StringVar(&FrontImage, "front-image", "", "The image the mirror front use, let null will disable auto front.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -93,11 +89,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	f := controllers.FrontConfig{}
-	if FrontDomain != "" && FrontImage != "" {
+	f := controllers.FrontConfig{Domain: os.Getenv("FRONT_DOMAIN"), Image: os.Getenv("FRONT_IMAGE")}
+	if f.Domain != "" && f.Image != "" {
 		f.Enable = true
-		f.Domain = FrontDomain
-		f.Image = FrontImage
 	}
 
 	if err = (&controllers.JobReconciler{

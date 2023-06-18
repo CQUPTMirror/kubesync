@@ -38,7 +38,6 @@ type Config struct {
 
 	APIBase string `toml:"api_base"`
 	Addr    string `toml:"listen_addr"`
-	Port    int    `toml:"listen_port"`
 
 	ZFSEnable bool   `toml:"zfs_enable"`
 	Zpool     string `toml:"zpool"`
@@ -127,7 +126,6 @@ func LoadConfig() (*Config, error) {
 
 	cfg.APIBase = GetEnv("API", "")
 	cfg.Addr = GetEnv("ADDR", "")
-	cfg.Port, _ = strconv.Atoi(GetEnv("PORT", "6000"))
 
 	cfg.ZFSEnable, _ = strconv.ParseBool(GetEnv("ZFS", ""))
 	cfg.Zpool = GetEnv("ZPOOL", "")
