@@ -14,14 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controllers
+package controller
 
 import (
 	"context"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,9 +47,9 @@ type JobReconciler struct {
 	Config ControllerConfig
 }
 
-//+kubebuilder:rbac:groups=redrock.team,resources=mirrorjobs,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=redrock.team,resources=mirrorjobs/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=redrock.team,resources=mirrorjobs/finalizers,verbs=update
+//+kubebuilder:rbac:groups=mirror.redrock.team,resources=jobs,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=mirror.redrock.team,resources=jobs/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=mirror.redrock.team,resources=jobs/finalizers,verbs=update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -59,11 +59,11 @@ type JobReconciler struct {
 // the user.
 //
 // For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.1/pkg/reconcile
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
 func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	var job mirrorv1beta1.MirrorJob
+	var job mirrorv1beta1.Job
 	if err := r.Get(ctx, req.NamespacedName, &job); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -133,7 +133,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 // SetupWithManager sets up the controller with the Manager.
 func (r *JobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mirrorv1beta1.MirrorJob{}).
+		For(&mirrorv1beta1.Job{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&appsv1.Deployment{}).

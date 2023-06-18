@@ -12,9 +12,9 @@ metadata:
   name: job-editor-role
 rules:
 - apiGroups:
-  - redrock.team
+  - mirror.redrock.team
   resources:
-  - mirrorjobs
+  - jobs
   verbs:
   - create
   - delete
@@ -24,8 +24,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - redrock.team
+  - mirror.redrock.team
   resources:
-  - mirrorjobs/status
+  - jobs/status
   verbs:
   - get

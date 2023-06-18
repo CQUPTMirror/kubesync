@@ -3,22 +3,22 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.1
+    controller-gen.kubebuilder.io/version: v0.11.3
   creationTimestamp: null
-  name: mirrorjobs.redrock.team
+  name: jobs.mirror.redrock.team
 spec:
-  group: redrock.team
+  group: mirror.redrock.team
   names:
-    kind: MirrorJob
-    listKind: MirrorJobList
-    plural: mirrorjobs
-    singular: mirrorjob
+    kind: Job
+    listKind: JobList
+    plural: jobs
+    singular: job
   scope: Namespaced
   versions:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: MirrorJob is the Schema for the jobs API
+        description: Job is the Schema for the jobs API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -45,15 +45,25 @@ spec:
                     type: integer
                   interval:
                     type: integer
+                  manager:
+                    type: string
+                  name:
+                    type: string
                   provider:
                     type: string
+                  retry:
+                    type: integer
                   rsync_options:
                     type: string
                   size_pattern:
                     type: string
+                  timeout:
+                    type: integer
                   upstream:
                     type: string
                 required:
+                - manager
+                - name
                 - provider
                 - upstream
                 type: object
@@ -1012,6 +1022,8 @@ spec:
                 type: object
             required:
             - config
+            - deploy
+            - volume
             type: object
           status:
             properties:

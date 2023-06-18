@@ -188,8 +188,8 @@ func (s *Manager) Run(ctx context.Context) error {
 	}
 }
 
-func (m *Manager) GetJobRaw(c *gin.Context, namespace, mirrorID string) (*v1beta1.MirrorJob, error) {
-	job := new(v1beta1.MirrorJob)
+func (m *Manager) GetJobRaw(c *gin.Context, namespace, mirrorID string) (*v1beta1.Job, error) {
+	job := new(v1beta1.Job)
 	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: namespace, Name: mirrorID}, job)
 	if err != nil {
 		err := fmt.Errorf("failed to get mirror: %s",
@@ -220,7 +220,7 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 }
 
 func (m *Manager) CreateJob(ctx context.Context, c internal.MirrorConfig) error {
-	job := &v1beta1.MirrorJob{
+	job := &v1beta1.Job{
 		ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: c.Namespace},
 		Spec:       c.JobSpec,
 	}
@@ -232,7 +232,7 @@ func (s *Manager) listAllJobs(c *gin.Context) {
 	var ws []internal.MirrorStatus
 
 	s.rwmu.RLock()
-	jobs := new(v1beta1.MirrorJobList)
+	jobs := new(v1beta1.JobList)
 	err := s.client.List(c.Request.Context(), jobs)
 	s.rwmu.RUnlock()
 
@@ -257,7 +257,7 @@ func (s *Manager) listNamespacedJobs(c *gin.Context) {
 	var ws []internal.MirrorStatus
 
 	s.rwmu.RLock()
-	jobs := new(v1beta1.MirrorJobList)
+	jobs := new(v1beta1.JobList)
 	err := s.client.List(c.Request.Context(), jobs, &client.ListOptions{Namespace: namespace})
 	s.rwmu.RUnlock()
 

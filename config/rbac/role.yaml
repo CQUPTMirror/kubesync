@@ -6,9 +6,9 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - redrock.team
+  - mirror.redrock.team
   resources:
-  - mirrorjobs
+  - jobs
   verbs:
   - create
   - delete
@@ -18,15 +18,41 @@ rules:
   - update
   - watch
 - apiGroups:
-  - redrock.team
+  - mirror.redrock.team
   resources:
-  - mirrorjobs/finalizers
+  - jobs/finalizers
   verbs:
   - update
 - apiGroups:
-  - redrock.team
+  - mirror.redrock.team
   resources:
-  - mirrorjobs/status
+  - jobs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - managers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - managers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - managers/status
   verbs:
   - get
   - patch

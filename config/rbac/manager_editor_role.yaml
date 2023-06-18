@@ -1,27 +1,31 @@
-# permissions for end users to view jobs.
+# permissions for end users to edit managers.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   labels:
     app.kubernetes.io/name: clusterrole
-    app.kubernetes.io/instance: job-viewer-role
+    app.kubernetes.io/instance: manager-editor-role
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: kubesync
     app.kubernetes.io/part-of: kubesync
     app.kubernetes.io/managed-by: kustomize
-  name: job-viewer-role
+  name: manager-editor-role
 rules:
 - apiGroups:
   - mirror.redrock.team
   resources:
-  - jobs
+  - managers
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - mirror.redrock.team
   resources:
-  - jobs/status
+  - managers/status
   verbs:
   - get

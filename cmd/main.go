@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
-	"github.com/CQUPTMirror/kubesync/controllers"
+	"github.com/CQUPTMirror/kubesync/internal/controller"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -71,7 +71,7 @@ func main() {
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "31b54b03.redrock.team",
+		LeaderElectionID:       "fbcb7ae1.redrock.team",
 		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
 		// when the Manager ends. This requires the binary to immediately end when the
 		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
@@ -89,17 +89,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	f := controllers.FrontConfig{Domain: os.Getenv("FRONT_DOMAIN"), Image: os.Getenv("FRONT_IMAGE")}
+	f := controller.FrontConfig{Domain: os.Getenv("FRONT_DOMAIN"), Image: os.Getenv("FRONT_IMAGE")}
 	if f.Domain != "" && f.Image != "" {
 		f.Enable = true
 	}
 
-	if err = (&controllers.JobReconciler{
+	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: controllers.ControllerConfig{Front: f},
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "MirrorJob")
+		setupLog.Error(err, "unable to create controller", "controller", "Job")
+		os.Exit(1)
+	}
+	if err = (&controller.ManagerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Manager")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

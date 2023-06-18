@@ -58,10 +58,8 @@ type PVConfig struct {
 type JobSpec struct {
 	Config JobConfig `json:"config"`
 
-	// +optional
 	Deploy DeployConfig `json:"deploy"`
 
-	// +optional
 	Volume PVConfig `json:"volume"`
 }
 
@@ -93,8 +91,8 @@ type JobStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// MirrorJob is the Schema for the jobs API
-type MirrorJob struct {
+// Job is the Schema for the jobs API
+type Job struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -104,13 +102,13 @@ type MirrorJob struct {
 
 //+kubebuilder:object:root=true
 
-// MirrorJobList contains a list of Job
-type MirrorJobList struct {
+// JobList contains a list of Job
+type JobList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []MirrorJob `json:"items"`
+	Items           []Job `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&MirrorJob{}, &MirrorJobList{})
+	SchemeBuilder.Register(&Job{}, &JobList{})
 }
