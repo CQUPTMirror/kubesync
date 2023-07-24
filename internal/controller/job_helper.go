@@ -2,19 +2,18 @@ package controller
 
 import (
 	"fmt"
+	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"strconv"
 
-	jobsv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap, error) {
+func (r *JobReconciler) desiredConfigMap(job v1beta1.Job) (corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ConfigMap"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -45,7 +44,7 @@ func (r *JobReconciler) desiredConfigMap(job jobsv1beta1.Job) (corev1.ConfigMap,
 	return cm, nil
 }
 
-func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev1.PersistentVolumeClaim, error) {
+func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.PersistentVolumeClaim, error) {
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -74,7 +73,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job jobsv1beta1.Job) (corev
 	return pvc, nil
 }
 
-func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deployment, error) {
+func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, error) {
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(6000)},
@@ -201,7 +200,7 @@ func (r *JobReconciler) desiredDeployment(job jobsv1beta1.Job) (appsv1.Deploymen
 	return app, nil
 }
 
-func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, error) {
+func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) {
 	svc := corev1.Service{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -225,44 +224,4 @@ func (r *JobReconciler) desiredService(job jobsv1beta1.Job) (corev1.Service, err
 		return svc, err
 	}
 	return svc, nil
-}
-
-func (r *JobReconciler) desiredIngress(job jobsv1beta1.Job) (networkingv1.Ingress, error) {
-	pathType := networkingv1.PathTypePrefix
-	ingr := networkingv1.Ingress{
-		TypeMeta: metav1.TypeMeta{APIVersion: networkingv1.SchemeGroupVersion.String(), Kind: "Ingress"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      job.Name,
-			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
-		},
-		Spec: networkingv1.IngressSpec{
-			Rules: []networkingv1.IngressRule{
-				{
-					Host: r.Config.Front.Domain,
-					IngressRuleValue: networkingv1.IngressRuleValue{
-						HTTP: &networkingv1.HTTPIngressRuleValue{
-							Paths: []networkingv1.HTTPIngressPath{
-								{
-									Path:     "/" + job.Name,
-									PathType: &pathType,
-									Backend: networkingv1.IngressBackend{
-										Service: &networkingv1.IngressServiceBackend{
-											Name: job.Name,
-											Port: networkingv1.ServiceBackendPort{Number: 80},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	if err := ctrl.SetControllerReference(&job, &ingr, r.Scheme); err != nil {
-		return ingr, err
-	}
-	return ingr, nil
 }

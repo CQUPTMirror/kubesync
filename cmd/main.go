@@ -89,8 +89,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	f := controller.FrontConfig{Domain: os.Getenv("FRONT_DOMAIN"), Image: os.Getenv("FRONT_IMAGE")}
-	if f.Domain != "" && f.Image != "" {
+	f := controller.FrontConfig{Image: os.Getenv("FRONT_IMAGE")}
+	if f.Image != "" {
 		f.Enable = true
 	}
 

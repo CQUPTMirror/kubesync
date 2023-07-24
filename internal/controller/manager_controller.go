@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,7 +51,37 @@ type ManagerReconciler struct {
 func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
-	// TODO(user): your logic here
+	var manager mirrorv1beta1.Manager
+	if err := r.Get(ctx, req.NamespacedName, &manager); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	app, err := r.desiredDeployment(manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	svc, err := r.desiredService(manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
+
+	err = r.Patch(ctx, &app, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.Patch(ctx, &svc, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.Status().Update(ctx, &manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -58,5 +90,7 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *ManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mirrorv1beta1.Manager{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
 		Complete(r)
 }

@@ -22,7 +22,7 @@ import (
 )
 
 type JobConfig struct {
-	Name            string `json:"name"`
+	Alias           string `json:"alias"`
 	Manager         string `json:"manager"`
 	Upstream        string `json:"upstream"`
 	Provider        string `json:"provider"`
@@ -75,6 +75,7 @@ const (
 	Disabled   SyncStatus = "disabled"
 )
 
+// JobStatus defines the observed state of Job
 type JobStatus struct {
 	Status       SyncStatus `json:"status"`
 	LastUpdate   int64      `json:"lastUpdate"`
