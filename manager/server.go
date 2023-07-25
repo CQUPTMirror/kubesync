@@ -301,7 +301,7 @@ func (s *Manager) deleteJob(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
 }
 
-// registerMirror register an newly-online mirror
+// registerMirror register a newly-online mirror
 func (s *Manager) registerMirror(c *gin.Context) {
 	var _mirror internal.MirrorStatus
 	c.BindJSON(&_mirror)

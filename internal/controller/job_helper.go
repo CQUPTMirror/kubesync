@@ -13,6 +13,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	ApiPort   = 6000
+	FrontPort = 80
+	RsyncPort = 873
+)
+
 func (r *JobReconciler) desiredConfigMap(job v1beta1.Job, manager string) (corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ConfigMap"},
@@ -76,7 +82,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.Pe
 func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, error) {
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(6000)},
+			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
 		},
 		InitialDelaySeconds: 10,
 		TimeoutSeconds:      5,
@@ -122,7 +128,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, e
 								},
 							},
 							Ports: []corev1.ContainerPort{
-								{ContainerPort: 6000, Name: "api", Protocol: "TCP"},
+								{ContainerPort: ApiPort, Name: "api", Protocol: "TCP"},
 							},
 						},
 					},
@@ -164,10 +170,10 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, e
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	if r.Config.Front.Enable {
+	if r.Config.FrontImage != "" {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(80)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(FrontPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
@@ -177,7 +183,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, e
 		}
 		frontContainer := corev1.Container{
 			Name:            job.Name + "-front",
-			Image:           r.Config.Front.Image,
+			Image:           r.Config.FrontImage,
 			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
 			LivenessProbe:   frontProbe,
 			ReadinessProbe:  frontProbe,
@@ -188,10 +194,39 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, e
 				},
 			},
 			Ports: []corev1.ContainerPort{
-				{ContainerPort: 80, Name: "front", Protocol: "TCP"},
+				{ContainerPort: FrontPort, Name: "front", Protocol: "TCP"},
 			},
 		}
 		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, frontContainer)
+	}
+	if r.Config.RsyncImage != "" {
+		rsyncProbe := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(RsyncPort)},
+			},
+			InitialDelaySeconds: 10,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       30,
+			SuccessThreshold:    1,
+			FailureThreshold:    5,
+		}
+		rsyncContainer := corev1.Container{
+			Name:            job.Name + "-rsync",
+			Image:           r.Config.RsyncImage,
+			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
+			LivenessProbe:   rsyncProbe,
+			ReadinessProbe:  rsyncProbe,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      job.Name,
+					MountPath: "/data",
+				},
+			},
+			Ports: []corev1.ContainerPort{
+				{ContainerPort: RsyncPort, Name: "rsync", Protocol: "TCP"},
+			},
+		}
+		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, rsyncContainer)
 	}
 
 	if err := ctrl.SetControllerReference(&job, &app, r.Scheme); err != nil {
@@ -210,14 +245,17 @@ func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) 
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				{Name: "api", Port: 6000, Protocol: "TCP", TargetPort: intstr.FromInt(6000)},
+				{Name: "api", Port: ApiPort, Protocol: "TCP", TargetPort: intstr.FromString("api")},
 			},
 			Selector: map[string]string{"job": job.Name},
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	if r.Config.Front.Enable {
-		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: 80, Protocol: "TCP", TargetPort: intstr.FromInt(80)})
+	if r.Config.FrontImage != "" {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: FrontPort, Protocol: "TCP", TargetPort: intstr.FromString("front")})
+	}
+	if r.Config.RsyncImage != "" {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "rsync", Port: RsyncPort, Protocol: "TCP", TargetPort: intstr.FromString("rsync")})
 	}
 
 	if err := ctrl.SetControllerReference(&job, &svc, r.Scheme); err != nil {

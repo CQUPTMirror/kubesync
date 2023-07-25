@@ -10,10 +10,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const ManagerPort = 3000
+
 func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.Deployment, error) {
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(3000)},
+			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ManagerPort)},
 		},
 		InitialDelaySeconds: 10,
 		TimeoutSeconds:      5,
@@ -45,7 +47,7 @@ func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.D
 							LivenessProbe:  probe,
 							ReadinessProbe: probe,
 							Ports: []corev1.ContainerPort{
-								{ContainerPort: 3000, Name: "api", Protocol: "TCP"},
+								{ContainerPort: ManagerPort, Name: "api", Protocol: "TCP"},
 							},
 						},
 					},
@@ -94,7 +96,7 @@ func (r *ManagerReconciler) desiredService(manager v1beta1.Manager) (corev1.Serv
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
-				{Name: "api", Port: 3000, Protocol: "TCP", TargetPort: intstr.FromInt(3000)},
+				{Name: "api", Port: ManagerPort, Protocol: "TCP", TargetPort: intstr.FromString("api")},
 			},
 			Selector: map[string]string{"manager": manager.Name},
 			Type:     corev1.ServiceTypeClusterIP,

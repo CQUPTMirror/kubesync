@@ -29,18 +29,9 @@ import (
 	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
-type FrontConfig struct {
-	Enable bool
-	Image  string
-}
-
-type RsyncConfig struct {
-	Enable bool
-}
-
 type Config struct {
-	Front FrontConfig
-	Rsync RsyncConfig
+	FrontImage string
+	RsyncImage string
 }
 
 // JobReconciler reconciles a Job object

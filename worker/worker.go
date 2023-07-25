@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// A Worker is a instance of tunasync worker
+// A Worker is an instance of tunasync worker
 type Worker struct {
 	L   sync.Mutex
 	cfg *Config

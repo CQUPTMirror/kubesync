@@ -89,14 +89,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	f := controller.FrontConfig{Image: os.Getenv("FRONT_IMAGE")}
-	if f.Image != "" {
-		f.Enable = true
-	}
-
 	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Config: controller.Config{FrontImage: os.Getenv("FRONT_IMAGE"), RsyncImage: os.Getenv("RSYNC_IMAGE")},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Job")
 		os.Exit(1)
