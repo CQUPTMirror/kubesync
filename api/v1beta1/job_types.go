@@ -23,7 +23,6 @@ import (
 
 type JobConfig struct {
 	Alias           string `json:"alias"`
-	Manager         string `json:"manager"`
 	Upstream        string `json:"upstream"`
 	Provider        string `json:"provider"`
 	Command         string `json:"command,omitempty"`
@@ -65,17 +64,16 @@ const (
 
 // JobStatus defines the observed state of Job
 type JobStatus struct {
-	Phase        DeployPhase `json:"phase"`
-	Status       SyncStatus  `json:"status"`
-	LastUpdate   int64       `json:"lastUpdate"`
-	LastStarted  int64       `json:"lastStarted"`
-	LastEnded    int64       `json:"lastEnded"`
-	Scheduled    int64       `json:"nextSchedule"`
-	Upstream     string      `json:"upstream"`
-	Size         string      `json:"size"`
-	ErrorMsg     string      `json:"errorMsg"`
-	LastOnline   int64       `json:"lastOnline"`
-	LastRegister int64       `json:"lastRegister"`
+	Status       SyncStatus `json:"status"`
+	LastUpdate   int64      `json:"lastUpdate"`
+	LastStarted  int64      `json:"lastStarted"`
+	LastEnded    int64      `json:"lastEnded"`
+	Scheduled    int64      `json:"nextSchedule"`
+	Upstream     string     `json:"upstream"`
+	Size         string     `json:"size"`
+	ErrorMsg     string     `json:"errorMsg"`
+	LastOnline   int64      `json:"lastOnline"`
+	LastRegister int64      `json:"lastRegister"`
 }
 
 //+kubebuilder:object:root=true

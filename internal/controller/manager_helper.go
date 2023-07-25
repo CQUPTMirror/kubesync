@@ -41,6 +41,7 @@ func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.D
 						{
 							Name:           manager.Name,
 							Image:          manager.Spec.Deploy.Image,
+							Env:            []corev1.EnvVar{{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}}},
 							LivenessProbe:  probe,
 							ReadinessProbe: probe,
 							Ports: []corev1.ContainerPort{

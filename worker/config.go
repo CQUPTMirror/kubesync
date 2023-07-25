@@ -11,7 +11,6 @@ import (
 // Config represents worker config options
 type Config struct {
 	Name       string `toml:"name"`
-	Namespace  string `toml:"namespace"`
 	Provider   string `toml:"provider"`
 	Upstream   string `toml:"upstream"`
 	LogDir     string `toml:"log_dir"`
@@ -79,13 +78,12 @@ func LoadConfig() (*Config, error) {
 	cfg := new(Config)
 
 	cfg.Name = GetEnv("NAME", "")
-	cfg.Namespace = GetEnv("NAMESPACE", "")
 	cfg.Provider = GetEnv("PROVIDER", "")
 	cfg.Upstream = GetEnv("UPSTREAM", "")
 	cfg.LogDir = GetEnv("LOG_DIR", "/var/log")
 	cfg.MirrorDir = GetEnv("MIRROR_DIR", "/data")
 
-	if cfg.Name == "" || cfg.Namespace == "" || cfg.Provider == "" || cfg.Upstream == "" {
+	if cfg.Name == "" || cfg.Provider == "" || cfg.Upstream == "" {
 		return cfg, errors.New("Failed to get mirror config")
 	}
 

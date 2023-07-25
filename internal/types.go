@@ -7,29 +7,23 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
-type MirrorBase struct {
-	ID        string `json:"id"`
-	Namespace string `json:"namespace"`
-}
-
 // A MirrorStatus represents a msg when
 // a worker has done syncing
 type MirrorStatus struct {
-	MirrorBase
+	ID string `json:"id"`
 
 	v1beta1.JobStatus
 }
 
 type MirrorConfig struct {
-	MirrorBase
+	ID string `json:"id"`
 
 	v1beta1.JobSpec
 }
 
 type MirrorSchedule struct {
-	MirrorBase
-
-	NextSchedule int64 `json:"next_schedule"`
+	ID           string `json:"id"`
+	NextSchedule int64  `json:"next_schedule"`
 }
 
 // A CmdVerb is an action to a job or worker

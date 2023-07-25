@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -63,12 +64,23 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	var managerName string
+	var managerList mirrorv1beta1.ManagerList
+	if err := r.List(ctx, &managerList, client.InNamespace(req.Namespace), client.MatchingFields{"status.phase": string(mirrorv1beta1.DeploySucceeded)}); err != nil {
+		return ctrl.Result{}, err
+	}
+	if len(managerList.Items) < 1 {
+		return ctrl.Result{}, errors.New("no active manager in this namespace")
+	} else {
+		managerName = managerList.Items[0].Name
+	}
+
 	pvc, err := r.desiredPersistentVolumeClaim(job)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	cm, err := r.desiredConfigMap(job)
+	cm, err := r.desiredConfigMap(job, managerName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

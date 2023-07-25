@@ -240,9 +240,9 @@ func (w *Worker) Name() string {
 }
 
 func (w *Worker) registerWorker() {
-	msg := internal.MirrorStatus{MirrorBase: internal.MirrorBase{ID: w.Name()}}
+	msg := internal.MirrorStatus{ID: w.Name()}
 
-	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.cfg.Namespace)
+	url := fmt.Sprintf("%s/jobs", w.cfg.APIBase)
 	logger.Debugf("register on manager url: %s", url)
 	for retry := 10; retry > 0; {
 		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -261,8 +261,8 @@ func (w *Worker) registerWorker() {
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
 	smsg := internal.MirrorStatus{
-		MirrorBase: internal.MirrorBase{ID: w.cfg.Name},
-		JobStatus:  v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
+		ID:        w.cfg.Name,
+		JobStatus: v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
 	}
 
 	// Certain Providers (rsync for example) may know the size of mirror,
@@ -272,7 +272,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	}
 
 	url := fmt.Sprintf(
-		"%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
+		"%s/jobs/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
 	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
@@ -282,12 +282,12 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 
 func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
 	msg := internal.MirrorSchedule{
-		MirrorBase:   internal.MirrorBase{ID: sched.jobName},
+		ID:           sched.jobName,
 		NextSchedule: sched.nextScheduled.Unix(),
 	}
 
 	url := fmt.Sprintf(
-		"%s/jobs/%s/%s/schedule", w.cfg.APIBase, w.cfg.Namespace, w.Name(),
+		"%s/jobs/%s/schedule", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
 	if _, err := PostJSON(url, msg, w.httpClient); err != nil {
@@ -298,7 +298,7 @@ func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
 func (w *Worker) fetchJobStatus() []internal.MirrorStatus {
 	var mirrorList []internal.MirrorStatus
 
-	url := fmt.Sprintf("%s/jobs/%s/%s", w.cfg.APIBase, w.cfg.Namespace, w.Name())
+	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.Name())
 
 	if _, err := GetJSON(url, &mirrorList, w.httpClient); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())

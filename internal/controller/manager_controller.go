@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -78,10 +77,6 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	err = r.Patch(ctx, &svc, client.Apply, applyOpts...)
 	if err != nil {
-		e := r.Delete(ctx, &app)
-		if e != nil {
-			return ctrl.Result{}, multierror.Append(err, e)
-		}
 		return ctrl.Result{}, err
 	}
 

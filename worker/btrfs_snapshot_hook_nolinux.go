@@ -6,7 +6,7 @@ package worker
 type btrfsSnapshotHook struct {
 }
 
-func newBtrfsSnapshotHook(provider mirrorProvider, snapshotPath string, mirror mirrorConfig) *btrfsSnapshotHook {
+func newBtrfsSnapshotHook(provider mirrorProvider, snapshotPath string) *btrfsSnapshotHook {
 	return &btrfsSnapshotHook{}
 }
 

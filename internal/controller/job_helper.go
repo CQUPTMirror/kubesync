@@ -13,7 +13,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-func (r *JobReconciler) desiredConfigMap(job v1beta1.Job) (corev1.ConfigMap, error) {
+func (r *JobReconciler) desiredConfigMap(job v1beta1.Job, manager string) (corev1.ConfigMap, error) {
 	cm := corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ConfigMap"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -34,7 +34,7 @@ func (r *JobReconciler) desiredConfigMap(job v1beta1.Job) (corev1.ConfigMap, err
 			"SIZE_PATTERN":     job.Spec.Config.SizePattern,
 			"RSYNC_OPTIONS":    job.Spec.Config.RsyncOptions,
 			"ADDITION_OPTIONS": job.Spec.Config.AdditionOptions,
-			"API":              fmt.Sprintf("http://%s:3000", job.Spec.Config.Manager),
+			"API":              fmt.Sprintf("http://%s:3000", manager),
 		},
 	}
 
