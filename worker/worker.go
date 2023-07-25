@@ -240,12 +240,14 @@ func (w *Worker) Name() string {
 }
 
 func (w *Worker) registerWorker() {
-	msg := internal.MirrorStatus{ID: w.Name()}
-
-	url := fmt.Sprintf("%s/jobs", w.cfg.APIBase)
+	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.Name())
 	logger.Debugf("register on manager url: %s", url)
 	for retry := 10; retry > 0; {
-		if _, err := PostJSON(url, msg, w.httpClient); err != nil {
+		client := w.httpClient
+		if client == nil {
+			client, _ = CreateHTTPClient()
+		}
+		if _, err := client.Post(url, "application/json; charset=utf-8", nil); err != nil {
 			logger.Errorf("Failed to register worker")
 			retry--
 			if retry > 0 {
@@ -275,7 +277,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		"%s/jobs/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
+	if _, err := PatchJSON(url, smsg, w.httpClient); err != nil {
 		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
 }

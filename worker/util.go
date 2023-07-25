@@ -64,6 +64,23 @@ func PostJSON(url string, obj interface{}, client *http.Client) (*http.Response,
 	return client.Post(url, "application/json; charset=utf-8", b)
 }
 
+// PatchJSON posts json object to url
+func PatchJSON(url string, obj interface{}, client *http.Client) (*http.Response, error) {
+	if client == nil {
+		client, _ = CreateHTTPClient()
+	}
+	b := new(bytes.Buffer)
+	if err := json.NewEncoder(b).Encode(obj); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("PATCH", url, b)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	return client.Do(req)
+}
+
 // GetJSON gets a json response from url
 func GetJSON(url string, obj interface{}, client *http.Client) (*http.Response, error) {
 	if client == nil {

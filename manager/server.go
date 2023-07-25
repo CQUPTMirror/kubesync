@@ -14,7 +14,6 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -115,10 +114,10 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	})
 
 	// list jobs, status page
-	s.engine.GET("/jobs", s.listAllJobs)
+	s.engine.GET("/jobs", s.listJob)
 
-	// mirror online
-	s.engine.POST("/jobs", s.registerMirror)
+	// create job
+	s.engine.POST("/job", s.createJob)
 
 	// mirrorID should be valid in this route group
 	mirrorValidateGroup := s.engine.Group("/jobs/:id")
@@ -126,12 +125,15 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		// delete specified mirror
 		mirrorValidateGroup.DELETE("", s.deleteJob)
 		// get job detail
-		mirrorValidateGroup.GET("", s.getJob)
+		mirrorValidateGroup.GET("", s.getJob) // TODO: get config & log
+		// mirror online
+		mirrorValidateGroup.POST("", s.registerMirror)
 		// post job status
-		mirrorValidateGroup.POST("", s.updateJob)
+		mirrorValidateGroup.PATCH("", s.updateJob)
 		mirrorValidateGroup.POST("size", s.updateMirrorSize)
 		mirrorValidateGroup.POST("schedule", s.updateSchedule)
 		mirrorValidateGroup.POST("disable", s.disableJob)
+		mirrorValidateGroup.DELETE("pod", s.restartPod)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST("cmd", s.handleClientCmd)
 	}
@@ -224,16 +226,17 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 	return err
 }
 
-func (m *Manager) CreateJob(ctx context.Context, c internal.MirrorConfig) error {
-	job := &v1beta1.Job{
-		ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: m.namespace},
-		Spec:       c.JobSpec,
-	}
-	return m.client.Create(ctx, job)
+func (m *Manager) createJob(c *gin.Context) {
+	// ctx context.Context, c internal.MirrorConfig) error
+	//job := &v1beta1.Job{
+	//	ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: m.namespace},
+	//	Spec:       c.JobSpec,
+	//}
+	//return m.client.Create(ctx, job)
 }
 
-// listAllJobs respond with all jobs of specified mirrors
-func (s *Manager) listAllJobs(c *gin.Context) {
+// listJob respond with all jobs of specified mirrors
+func (s *Manager) listJob(c *gin.Context) {
 	var ws []internal.MirrorStatus
 
 	s.rwmu.RLock()
@@ -303,8 +306,9 @@ func (s *Manager) deleteJob(c *gin.Context) {
 
 // registerMirror register a newly-online mirror
 func (s *Manager) registerMirror(c *gin.Context) {
+	mirrorID := c.Param("id")
 	var _mirror internal.MirrorStatus
-	c.BindJSON(&_mirror)
+	_mirror.ID = mirrorID
 	_mirror.LastOnline = time.Now().Unix()
 	_mirror.LastRegister = time.Now().Unix()
 	s.rwmu.Lock()
@@ -509,6 +513,9 @@ func (s *Manager) disableJob(c *gin.Context) {
 	}
 	runLog.Info("Mirror <%s> deleted", mirrorID)
 	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
+}
+
+func (s *Manager) restartPod(c *gin.Context) {
 }
 
 // PostJSON posts json object to url

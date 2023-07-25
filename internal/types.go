@@ -38,6 +38,8 @@ const (
 	CmdRestart
 	// CmdPing ensures the goroutine is alive
 	CmdPing
+	// CmdUpdate update size
+	CmdUpdate
 )
 
 func (c CmdVerb) String() string {
