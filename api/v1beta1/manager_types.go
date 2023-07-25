@@ -17,7 +17,28 @@ limitations under the License.
 package v1beta1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+type DeployConfig struct {
+	Image            string                        `json:"image"`
+	Env              map[string]string             `json:"env"`
+	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
+	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+	NodeName         string                        `json:"nodeName,omitempty"`
+	Affinity         *corev1.Affinity              `json:"affinity,omitempty"`
+	Tolerations      []corev1.Toleration           `json:"tolerations,omitempty"`
+	CPULimit         string                        `json:"cpuLimit,omitempty"`
+	MemoryLimit      string                        `json:"memLimit,omitempty"`
+}
+
+type DeployPhase string
+
+const (
+	DeployPending   DeployPhase = "Pending"
+	DeploySucceeded DeployPhase = "Succeeded"
+	DeployFailed    DeployPhase = "Failed"
 )
 
 // ManagerSpec defines the desired state of Manager
@@ -27,6 +48,7 @@ type ManagerSpec struct {
 
 // ManagerStatus defines the observed state of Manager
 type ManagerStatus struct {
+	Phase DeployPhase `json:"phase"`
 }
 
 //+kubebuilder:object:root=true

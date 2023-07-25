@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"errors"
+	"github.com/hashicorp/go-multierror"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 
@@ -41,19 +43,20 @@ type ManagerReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Manager object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.14.4/pkg/reconcile
 func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = log.FromContext(ctx)
 
 	var manager mirrorv1beta1.Manager
 	if err := r.Get(ctx, req.NamespacedName, &manager); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	var managerList mirrorv1beta1.ManagerList
+	if err := r.List(ctx, &managerList, client.InNamespace(req.Namespace), client.MatchingFields{"status.phase": string(mirrorv1beta1.DeploySucceeded)}); err != nil {
+		return ctrl.Result{}, err
+	}
+	if len(managerList.Items) > 0 {
+		return ctrl.Result{}, errors.New("already have one active manager in this namespace")
 	}
 
 	app, err := r.desiredDeployment(manager)
@@ -75,8 +78,14 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	err = r.Patch(ctx, &svc, client.Apply, applyOpts...)
 	if err != nil {
+		e := r.Delete(ctx, &app)
+		if e != nil {
+			return ctrl.Result{}, multierror.Append(err, e)
+		}
 		return ctrl.Result{}, err
 	}
+
+	manager.Status.Phase = mirrorv1beta1.DeploySucceeded
 
 	err = r.Status().Update(ctx, &manager)
 	if err != nil {

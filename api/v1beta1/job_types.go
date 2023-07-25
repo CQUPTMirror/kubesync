@@ -36,18 +36,6 @@ type JobConfig struct {
 	AdditionOptions string `json:"addition_options,omitempty"`
 }
 
-type DeployConfig struct {
-	Image            string                        `json:"image"`
-	Env              map[string]string             `json:"env"`
-	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
-	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
-	NodeName         string                        `json:"nodeName,omitempty"`
-	Affinity         *corev1.Affinity              `json:"affinity,omitempty"`
-	Tolerations      []corev1.Toleration           `json:"tolerations,omitempty"`
-	CPULimit         string                        `json:"cpuLimit,omitempty"`
-	MemoryLimit      string                        `json:"memLimit,omitempty"`
-}
-
 type PVConfig struct {
 	Size         string                            `json:"size"`
 	StorageClass *string                           `json:"storageClass,omitempty"`
@@ -77,16 +65,17 @@ const (
 
 // JobStatus defines the observed state of Job
 type JobStatus struct {
-	Status       SyncStatus `json:"status"`
-	LastUpdate   int64      `json:"lastUpdate"`
-	LastStarted  int64      `json:"lastStarted"`
-	LastEnded    int64      `json:"lastEnded"`
-	Scheduled    int64      `json:"nextSchedule"`
-	Upstream     string     `json:"upstream"`
-	Size         string     `json:"size"`
-	ErrorMsg     string     `json:"errorMsg"`
-	LastOnline   int64      `json:"lastOnline"`
-	LastRegister int64      `json:"lastRegister"`
+	Phase        DeployPhase `json:"phase"`
+	Status       SyncStatus  `json:"status"`
+	LastUpdate   int64       `json:"lastUpdate"`
+	LastStarted  int64       `json:"lastStarted"`
+	LastEnded    int64       `json:"lastEnded"`
+	Scheduled    int64       `json:"nextSchedule"`
+	Upstream     string      `json:"upstream"`
+	Size         string      `json:"size"`
+	ErrorMsg     string      `json:"errorMsg"`
+	LastOnline   int64       `json:"lastOnline"`
+	LastRegister int64       `json:"lastRegister"`
 }
 
 //+kubebuilder:object:root=true
