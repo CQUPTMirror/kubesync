@@ -83,7 +83,7 @@ func (m *mirrorJob) SetProvider(provider mirrorProvider) error {
 	return nil
 }
 
-// runMirrorJob is the goroutine where syncing job runs in
+// Run runMirrorJob is the goroutine where syncing job runs in
 // arguments:
 //
 //	provider: mirror provider object

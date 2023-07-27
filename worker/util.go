@@ -11,7 +11,16 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"syscall"
 	"time"
+)
+
+const (
+	B = 1
+	K = 1024 * B
+	M = 1024 * K
+	G = 1024 * M
+	T = 1024 * G
 )
 
 var rsyncExitValues = map[int]string{
@@ -130,6 +139,30 @@ func ExtractSizeFromRsyncLog(logFile string) string {
 	// (?m) flag enables multi-line mode
 	re := regexp.MustCompile(`(?m)^Total file size: ([0-9\.]+[KMGTP]?) bytes`)
 	return ExtractSizeFromLog(logFile, re)
+}
+
+// ExtractSizeFromFileSystem extracts the size from filesystem
+func ExtractSizeFromFileSystem(path string) (size string) {
+	fs := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &fs)
+	if err != nil {
+		return
+	}
+	used := float64(fs.Blocks*uint64(fs.Bsize) - fs.Bfree*uint64(fs.Bsize))
+	switch {
+	case used > T:
+		size = fmt.Sprintf("%.2fT", used/float64(T))
+	case used > G:
+		size = fmt.Sprintf("%.2fG", used/float64(G))
+	case used > M:
+		size = fmt.Sprintf("%.2fM", used/float64(M))
+	case used > K:
+		size = fmt.Sprintf("%.2fK", used/float64(K))
+	default:
+		size = fmt.Sprintf("%.2fB", used)
+	}
+
+	return
 }
 
 // TranslateRsyncErrorCode translates the exit code of rsync to a message

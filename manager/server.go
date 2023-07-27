@@ -336,18 +336,10 @@ func (s *Manager) returnErrJSON(c *gin.Context, code int, err error) {
 }
 
 func (s *Manager) updateSchedule(c *gin.Context) {
+	mirrorID := c.Param("id")
 	type empty struct{}
-
 	var schedule internal.MirrorSchedule
 	c.BindJSON(&schedule)
-
-	mirrorID := schedule.ID
-	if len(mirrorID) == 0 {
-		s.returnErrJSON(
-			c, http.StatusBadRequest,
-			errors.New("Mirror Name should not be empty"),
-		)
-	}
 
 	s.rwmu.Lock()
 	curStatus, err := s.GetJob(c, mirrorID)
@@ -444,21 +436,19 @@ func (s *Manager) updateJob(c *gin.Context) {
 func (s *Manager) updateMirrorSize(c *gin.Context) {
 	mirrorID := c.Param("id")
 	type SizeMsg struct {
-		ID   string `json:"id"`
 		Size string `json:"size"`
 	}
 	var msg SizeMsg
 	c.BindJSON(&msg)
 
-	mirrorName := msg.ID
 	s.rwmu.Lock()
 	status, err := s.GetJob(c, mirrorID)
 	s.rwmu.Unlock()
 
 	if err != nil {
 		runLog.Error(err,
-			"Failed to get status of mirror %s @<%s>: %s",
-			mirrorName, mirrorID, err.Error(),
+			"Failed to get status of job %s: %s",
+			mirrorID, err.Error(),
 		)
 		s.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
@@ -476,8 +466,8 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 	s.rwmu.Unlock()
 
 	if err != nil {
-		err := fmt.Errorf("failed to update job %s of mirror %s: %s",
-			mirrorName, mirrorID, err.Error(),
+		err := fmt.Errorf("failed to update job %s: %s",
+			mirrorID, err.Error(),
 		)
 		c.Error(err)
 		s.returnErrJSON(c, http.StatusInternalServerError, err)

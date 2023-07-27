@@ -22,8 +22,7 @@ type MirrorConfig struct {
 }
 
 type MirrorSchedule struct {
-	ID           string `json:"id"`
-	NextSchedule int64  `json:"next_schedule"`
+	NextSchedule int64 `json:"next_schedule"`
 }
 
 // A CmdVerb is an action to a job or worker
