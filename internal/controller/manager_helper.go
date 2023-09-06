@@ -51,6 +51,7 @@ func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.D
 							},
 						},
 					},
+					ServiceAccountName: manager.Spec.Deploy.ServiceAccount,
 				},
 			},
 		},

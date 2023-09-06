@@ -23,7 +23,7 @@ import (
 
 type DeployConfig struct {
 	Image            string                        `json:"image"`
-	Env              map[string]string             `json:"env"`
+	Env              map[string]string             `json:"env,omitempty"`
 	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	NodeName         string                        `json:"nodeName,omitempty"`
@@ -31,6 +31,7 @@ type DeployConfig struct {
 	Tolerations      []corev1.Toleration           `json:"tolerations,omitempty"`
 	CPULimit         string                        `json:"cpuLimit,omitempty"`
 	MemoryLimit      string                        `json:"memLimit,omitempty"`
+	ServiceAccount   string                        `json:"serviceAccount,omitempty"`
 }
 
 type DeployPhase string

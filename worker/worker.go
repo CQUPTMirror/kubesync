@@ -284,7 +284,6 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 
 func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
 	msg := internal.MirrorSchedule{
-		ID:           sched.jobName,
 		NextSchedule: sched.nextScheduled.Unix(),
 	}
 
