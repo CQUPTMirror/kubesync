@@ -54,7 +54,7 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err := r.List(ctx, &managerList, client.InNamespace(req.Namespace), client.MatchingFields{"status.phase": string(mirrorv1beta1.DeploySucceeded)}); err != nil {
 		return ctrl.Result{}, err
 	}
-	if len(managerList.Items) > 0 {
+	if len(managerList.Items) > 0 && managerList.Items[0].Name != manager.Name {
 		return ctrl.Result{}, errors.New("already have one active manager in this namespace")
 	}
 
@@ -92,6 +92,13 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &mirrorv1beta1.Manager{}, "status.phase", func(rawObj client.Object) []string {
+		manager := rawObj.(*mirrorv1beta1.Manager)
+		return []string{string(manager.Status.Phase)}
+	}); err != nil {
+		return err
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mirrorv1beta1.Manager{}).
 		Owns(&appsv1.Deployment{}).

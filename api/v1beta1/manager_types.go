@@ -44,7 +44,7 @@ const (
 
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy DeployConfig `json:",inline"`
+	Deploy DeployConfig `json:"deploy"`
 }
 
 // ManagerStatus defines the observed state of Manager

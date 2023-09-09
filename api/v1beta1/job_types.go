@@ -22,7 +22,7 @@ import (
 )
 
 type JobConfig struct {
-	Alias           string `json:"alias"`
+	Alias           string `json:"alias,omitempty"`
 	Upstream        string `json:"upstream"`
 	Provider        string `json:"provider"`
 	Command         string `json:"command,omitempty"`
