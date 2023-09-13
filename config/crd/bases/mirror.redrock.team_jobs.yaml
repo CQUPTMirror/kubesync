@@ -60,7 +60,6 @@ spec:
                   upstream:
                     type: string
                 required:
-                - alias
                 - provider
                 - upstream
                 type: object
