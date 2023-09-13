@@ -54,9 +54,7 @@ func contextErrorLogger(c *gin.Context) {
 	errs := c.Errors.ByType(gin.ErrorTypeAny)
 	if len(errs) > 0 {
 		for _, err := range errs {
-			runLog.Error(err, `"in request "%s %s: %s"`,
-				c.Request.Method, c.Request.URL.Path,
-				err.Error())
+			runLog.Error(err, fmt.Sprintf(`"in request "%s %s: %s"`, c.Request.Method, c.Request.URL.Path, err.Error()))
 		}
 	}
 	// pass on to the next middleware in chain
@@ -300,7 +298,7 @@ func (s *Manager) deleteJob(c *gin.Context) {
 		s.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	runLog.Info("Mirror <%s> deleted", mirrorID)
+	runLog.Info(fmt.Sprintf("Mirror <%s> deleted", mirrorID))
 	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
 }
 
@@ -324,7 +322,7 @@ func (s *Manager) registerMirror(c *gin.Context) {
 		return
 	}
 
-	runLog.Info("Mirror <%s> registered", _mirror.ID)
+	runLog.Info(fmt.Sprintf("Mirror <%s> registered", _mirror.ID))
 	// create mirrorCmd channel for this mirror
 	c.JSON(http.StatusOK, _mirror)
 }
@@ -346,9 +344,7 @@ func (s *Manager) updateSchedule(c *gin.Context) {
 	s.rwmu.Unlock()
 
 	if err != nil {
-		runLog.Error(err, "failed to get job %s: %s",
-			mirrorID, err.Error(),
-		)
+		runLog.Error(err, fmt.Sprintf("failed to get job %s: %s", mirrorID, err.Error()))
 		c.JSON(http.StatusOK, empty{})
 	}
 
@@ -413,9 +409,9 @@ func (s *Manager) updateJob(c *gin.Context) {
 	// for logging
 	switch status.Status {
 	case v1beta1.Syncing:
-		runLog.Info("Job [%s] starts syncing", status.ID)
+		runLog.Info(fmt.Sprintf("Job [%s] starts syncing", status.ID))
 	default:
-		runLog.Info("Job [%s] %s", status.ID, status.Status)
+		runLog.Info(fmt.Sprintf("Job [%s] %s", status.ID, status.Status))
 	}
 
 	s.rwmu.Lock()
@@ -446,10 +442,7 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 	s.rwmu.Unlock()
 
 	if err != nil {
-		runLog.Error(err,
-			"Failed to get status of job %s: %s",
-			mirrorID, err.Error(),
-		)
+		runLog.Error(err, fmt.Sprintf("Failed to get status of job %s: %s", mirrorID, err.Error()))
 		s.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
@@ -459,7 +452,7 @@ func (s *Manager) updateMirrorSize(c *gin.Context) {
 		status.Size = msg.Size
 	}
 
-	runLog.Info("Mirror size of [%s]: %s", status.ID, status.Size)
+	runLog.Info(fmt.Sprintf("Mirror size of [%s]: %s", status.ID, status.Size))
 
 	s.rwmu.Lock()
 	err = s.UpdateJobStatus(c, status)
@@ -501,7 +494,7 @@ func (s *Manager) disableJob(c *gin.Context) {
 		s.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	runLog.Info("Mirror <%s> deleted", mirrorID)
+	runLog.Info(fmt.Sprintf("Mirror <%s> deleted", mirrorID))
 	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
 }
 
@@ -550,7 +543,7 @@ func (s *Manager) handleClientCmd(c *gin.Context) {
 		s.rwmu.Unlock()
 	}
 
-	runLog.Info("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID)
+	runLog.Info(fmt.Sprintf("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID))
 	// post command to mirror
 	_, err = PostJSON(mirrorID, clientCmd, s.httpClient)
 	if err != nil {

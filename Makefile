@@ -75,9 +75,9 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: test ## Build docker image with the manager.
-	docker build -f Dockerfile.controller -t ${REPO}/controller:latest .
-	docker build -f Dockerfile.manager -t ${REPO}/manager:latest .
-	docker build -f Dockerfile.worker -t ${REPO}/worker:latest .
+	docker build -f docker/Dockerfile.controller -t ${REPO}/controller:latest .
+	docker build -f docker/Dockerfile.manager -t ${REPO}/manager:latest .
+	docker build -f docker/Dockerfile.worker -t ${REPO}/worker:latest .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -98,16 +98,16 @@ PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
 docker-buildx: test ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile.controller > Dockerfile.controller.cross
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile.manager > Dockerfile.manager.cross
-	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile.worker > Dockerfile.worker.cross
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' docker/Dockerfile.controller > docker/Dockerfile.controller.cross
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' docker/Dockerfile.manager > docker/Dockerfile.manager.cross
+	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' docker/Dockerfile.worker > docker/Dockerfile.worker.cross
 	- docker buildx create --name project-v3-builder
 	docker buildx use project-v3-builder
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/controller:latest -f Dockerfile.controller.cross .
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/manager:latest -f Dockerfile.manager.cross .
-	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/worker:latest -f Dockerfile.worker.cross .
+	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/controller:latest -f docker/Dockerfile.controller.cross .
+	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/manager:latest -f docker/Dockerfile.manager.cross .
+	- docker buildx build --push --platform=$(PLATFORMS) --tag ${REPO}/worker:latest -f docker/Dockerfile.worker.cross .
 	- docker buildx rm project-v3-builder
-	rm Dockerfile.controller.cross Dockerfile.manager.cross Dockerfile.worker.cross
+	rm docker/Dockerfile.controller.cross docker/Dockerfile.manager.cross docker/Dockerfile.worker.cross
 
 ##@ Deployment
 
