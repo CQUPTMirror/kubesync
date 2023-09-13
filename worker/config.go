@@ -123,7 +123,7 @@ func LoadConfig() (*Config, error) {
 	cfg.ExecOnFailure = strings.Split(GetEnv("EXEC_ON_FAILURE", ""), ";")
 
 	cfg.APIBase = GetEnv("API", "")
-	cfg.Addr = GetEnv("ADDR", "")
+	cfg.Addr = GetEnv("ADDR", ":6000")
 
 	cfg.ZFSEnable, _ = strconv.ParseBool(GetEnv("ZFS", ""))
 	cfg.Zpool = GetEnv("ZPOOL", "")

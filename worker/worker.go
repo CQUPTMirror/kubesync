@@ -21,7 +21,7 @@ type Worker struct {
 	semaphore   chan empty
 	exit        chan empty
 
-	schedule   *scheduleQueue
+	schedule   *schedule
 	httpEngine *gin.Engine
 	httpClient *http.Client
 }
@@ -40,7 +40,7 @@ func NewTUNASyncWorker(cfg *Config) *Worker {
 		semaphore:   make(chan empty, cfg.Concurrent),
 		exit:        make(chan empty),
 
-		schedule: newScheduleQueue(),
+		schedule: newSchedule(),
 	}
 
 	w.initJobs()
@@ -93,7 +93,7 @@ func (w *Worker) makeHTTPServer() {
 
 		// No matter what command, the existing job
 		// schedule should be flushed
-		w.schedule.Remove(w.job.Name())
+		w.schedule.Remove()
 
 		// if job disabled, start them first
 		switch cmd.Cmd {
@@ -145,39 +145,29 @@ func (w *Worker) runHTTPServer() {
 func (w *Worker) runSchedule() {
 	w.L.Lock()
 
-	mirrorList := w.fetchJobStatus()
+	mirror := w.fetchJobStatus()
 
 	// Fetch mirror list stored in the manager
 	// put it on the scheduled time
 	// if it's disabled, ignore it
-	for _, m := range mirrorList {
-		switch m.Status {
-		case v1beta1.Disabled:
-			w.job.SetState(stateDisabled)
-			continue
-		case v1beta1.Paused:
-			w.job.SetState(statePaused)
-			go w.job.Run(w.managerChan, w.semaphore)
-			continue
-		default:
-			w.job.SetState(stateNone)
-			go w.job.Run(w.managerChan, w.semaphore)
-			stime := m.LastUpdate + int64(w.job.provider.Interval().Seconds())
-			// logger.Debugf("Scheduling job %s @%s", w.job.Name(), stime.Format("2006-01-02 15:04:05"))
-			w.schedule.AddJob(stime, w.job)
-		}
+	switch mirror.Status {
+	case v1beta1.Disabled:
+		w.job.SetState(stateDisabled)
+	case v1beta1.Paused:
+		w.job.SetState(statePaused)
+		go w.job.Run(w.managerChan, w.semaphore)
+	default:
+		w.job.SetState(stateNone)
+		go w.job.Run(w.managerChan, w.semaphore)
+		stime := mirror.LastUpdate + int64(w.job.provider.Interval().Seconds())
+		// logger.Debugf("Scheduling job %s @%s", w.job.Name(), stime.Format("2006-01-02 15:04:05"))
+		w.schedule.AddJob(stime, w.job)
 	}
-	// some new jobs may be added
-	// which does not exist in the
-	// manager's mirror list
-	w.job.SetState(stateNone)
-	go w.job.Run(w.managerChan, w.semaphore)
-	w.schedule.AddJob(time.Now().Unix(), w.job)
 
 	w.L.Unlock()
 
-	schedInfo := w.schedule.GetJob()
-	w.updateSchedInfo(schedInfo)
+	nextScheduled := w.schedule.GetJob()
+	w.updateSchedInfo(nextScheduled)
 
 	tick := time.Tick(5 * time.Second)
 	for {
@@ -207,8 +197,8 @@ func (w *Worker) runSchedule() {
 				w.schedule.AddJob(schedTime.Unix(), w.job)
 			}
 
-			schedInfo = w.schedule.GetJob()
-			w.updateSchedInfo(schedInfo)
+			nextScheduled = w.schedule.GetJob()
+			w.updateSchedInfo(nextScheduled)
 
 		case <-tick:
 			// check schedule every 5 seconds
@@ -282,9 +272,9 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	}
 }
 
-func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
+func (w *Worker) updateSchedInfo(nextScheduled time.Time) {
 	msg := internal.MirrorSchedule{
-		NextSchedule: sched.nextScheduled.Unix(),
+		NextSchedule: nextScheduled.Unix(),
 	}
 
 	url := fmt.Sprintf(
@@ -296,14 +286,14 @@ func (w *Worker) updateSchedInfo(sched jobScheduleInfo) {
 	}
 }
 
-func (w *Worker) fetchJobStatus() []internal.MirrorStatus {
-	var mirrorList []internal.MirrorStatus
+func (w *Worker) fetchJobStatus() internal.MirrorStatus {
+	var mirror internal.MirrorStatus
 
 	url := fmt.Sprintf("%s/jobs/%s", w.cfg.APIBase, w.Name())
 
-	if _, err := GetJSON(url, &mirrorList, w.httpClient); err != nil {
+	if _, err := GetJSON(url, &mirror, w.httpClient); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())
 	}
 
-	return mirrorList
+	return mirror
 }

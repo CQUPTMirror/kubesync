@@ -220,7 +220,7 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 	}
 	job.Status = w.JobStatus
 	job.Status.LastOnline = time.Now().Unix()
-	err = m.client.Update(c.Request.Context(), job)
+	err = m.client.Status().Update(c.Request.Context(), job)
 	return err
 }
 

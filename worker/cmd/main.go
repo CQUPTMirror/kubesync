@@ -73,28 +73,21 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "tunasync"
 	app.Usage = "tunasync mirror job management tool"
-	app.Commands = []cli.Command{
-		{
-			Name:    "worker",
-			Aliases: []string{"w"},
-			Usage:   "start the tunasync worker",
-			Action:  startWorker,
-			Flags: []cli.Flag{
-				cli.BoolFlag{
-					Name:  "verbose, v",
-					Usage: "Enable verbose logging",
-				},
-				cli.BoolFlag{
-					Name:  "debug",
-					Usage: "Run worker in debug mode",
-				},
-				cli.StringFlag{
-					Name:  "prof-path",
-					Value: "",
-					Usage: "Go profiling file path",
-				},
-			},
+	app.Flags = []cli.Flag{
+		cli.BoolFlag{
+			Name:  "verbose, v",
+			Usage: "Enable verbose logging",
+		},
+		cli.BoolFlag{
+			Name:  "debug",
+			Usage: "Run worker in debug mode",
+		},
+		cli.StringFlag{
+			Name:  "prof-path",
+			Value: "",
+			Usage: "Go profiling file path",
 		},
 	}
+	app.Action = startWorker
 	app.Run(os.Args)
 }
