@@ -33,6 +33,7 @@ type JobConfig struct {
 	RsyncOptions    string `json:"rsync_options,omitempty"`
 	SizePattern     string `json:"size_pattern,omitempty"`
 	AdditionOptions string `json:"addition_options,omitempty"`
+	Debug           string `json:"debug,omitempty"`
 }
 
 type PVConfig struct {
@@ -43,11 +44,9 @@ type PVConfig struct {
 
 // JobSpec defines the desired state of Job
 type JobSpec struct {
-	Config JobConfig `json:"config"`
-
+	Config JobConfig    `json:"config"`
 	Deploy DeployConfig `json:"deploy"`
-
-	Volume PVConfig `json:"volume"`
+	Volume PVConfig     `json:"volume"`
 }
 
 type SyncStatus string

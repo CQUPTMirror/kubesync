@@ -40,6 +40,9 @@ type Config struct {
 
 	BtrfsEnable  bool   `toml:"btrfs_enable"`
 	SnapshotPath string `toml:"snapshot_path"`
+
+	Verbose bool
+	Debug   bool
 }
 
 type MemBytes int64
@@ -71,6 +74,9 @@ func (m *MemBytes) UnmarshalText(s []byte) error {
 // LoadConfig loads configuration
 func LoadConfig() (*Config, error) {
 	cfg := new(Config)
+
+	cfg.Verbose = GetBoolEnv("VERBOSE")
+	cfg.Debug = GetBoolEnv("DEBUG")
 
 	cfg.Name = GetStringEnv("NAME", "")
 	cfg.Provider = GetStringEnv("PROVIDER", "")

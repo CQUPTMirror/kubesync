@@ -42,6 +42,9 @@ func (r *JobReconciler) desiredConfigMap(job v1beta1.Job, manager string) (corev
 			"API":              fmt.Sprintf("http://%s:3000", manager),
 		},
 	}
+	if job.Spec.Config.Debug != "" {
+		cm.Data["DEBUG"] = "true"
+	}
 
 	if err := ctrl.SetControllerReference(&job, &cm, r.Scheme); err != nil {
 		return cm, err

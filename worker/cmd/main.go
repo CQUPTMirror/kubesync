@@ -1,12 +1,12 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/moby/moby/pkg/reexec"
 	"github.com/pkg/profile"
 	"github.com/urfave/cli"
@@ -18,15 +18,15 @@ import (
 var logger = logging.MustGetLogger("tunasync")
 
 func startWorker(c *cli.Context) error {
-	worker.InitLogger(c.Bool("verbose"), c.Bool("debug"))
-	if !c.Bool("debug") {
-		gin.SetMode(gin.ReleaseMode)
-	}
-
 	cfg, err := worker.LoadConfig()
 	if err != nil {
 		logger.Errorf("Error loading config: %s", err.Error())
 		os.Exit(1)
+	}
+
+	worker.InitLogger(c.Bool("verbose") || cfg.Verbose, c.Bool("debug") || cfg.Debug)
+	if !(c.Bool("debug") || cfg.Debug) {
+		gin.SetMode(gin.ReleaseMode)
 	}
 
 	w := worker.NewTUNASyncWorker(cfg)
