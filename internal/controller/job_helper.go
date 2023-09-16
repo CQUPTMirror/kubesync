@@ -1,16 +1,16 @@
 package controller
 
 import (
+	"errors"
 	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
-	"strconv"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"strconv"
 )
 
 const (
@@ -18,39 +18,6 @@ const (
 	FrontPort = 80
 	RsyncPort = 873
 )
-
-func (r *JobReconciler) desiredConfigMap(job v1beta1.Job, manager string) (corev1.ConfigMap, error) {
-	cm := corev1.ConfigMap{
-		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ConfigMap"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      job.Name,
-			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
-		},
-		Data: map[string]string{
-			"NAME":             job.Name,
-			"PROVIDER":         job.Spec.Config.Provider,
-			"UPSTREAM":         job.Spec.Config.Upstream,
-			"CONCURRENT":       strconv.Itoa(job.Spec.Config.Concurrent),
-			"INTERVAL":         strconv.Itoa(job.Spec.Config.Interval),
-			"RETRY":            strconv.Itoa(job.Spec.Config.Retry),
-			"TIMEOUT":          strconv.Itoa(job.Spec.Config.Timeout),
-			"COMMAND":          job.Spec.Config.Command,
-			"SIZE_PATTERN":     job.Spec.Config.SizePattern,
-			"RSYNC_OPTIONS":    job.Spec.Config.RsyncOptions,
-			"ADDITION_OPTIONS": job.Spec.Config.AdditionOptions,
-			"API":              fmt.Sprintf("http://%s:3000", manager),
-		},
-	}
-	if job.Spec.Config.Debug != "" {
-		cm.Data["DEBUG"] = "true"
-	}
-
-	if err := ctrl.SetControllerReference(&job, &cm, r.Scheme); err != nil {
-		return cm, err
-	}
-	return cm, nil
-}
 
 func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.PersistentVolumeClaim, error) {
 	pvc := corev1.PersistentVolumeClaim{
@@ -81,7 +48,27 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.Pe
 	return pvc, nil
 }
 
-func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, error) {
+func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (appsv1.Deployment, error) {
+	env := []corev1.EnvVar{
+		{Name: "NAME", Value: job.Name},
+		{Name: "PROVIDER", Value: job.Spec.Config.Provider},
+		{Name: "UPSTREAM", Value: job.Spec.Config.Upstream},
+		{Name: "CONCURRENT", Value: strconv.Itoa(job.Spec.Config.Concurrent)},
+		{Name: "INTERVAL", Value: strconv.Itoa(job.Spec.Config.Interval)},
+		{Name: "RETRY", Value: strconv.Itoa(job.Spec.Config.Retry)},
+		{Name: "TIMEOUT", Value: strconv.Itoa(job.Spec.Config.Timeout)},
+		{Name: "COMMAND", Value: job.Spec.Config.Command},
+		{Name: "SIZE_PATTERN", Value: job.Spec.Config.SizePattern},
+		{Name: "RSYNC_OPTIONS", Value: job.Spec.Config.RsyncOptions},
+		{Name: "ADDITION_OPTIONS", Value: job.Spec.Config.AdditionOptions},
+		{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
+	}
+	if job.Spec.Config.Provider == "" || job.Spec.Config.Upstream == "" {
+		return appsv1.Deployment{}, errors.New("provider or upstream not set")
+	}
+	if job.Spec.Config.Debug != "" {
+		env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
+	}
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
@@ -110,17 +97,9 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job) (appsv1.Deployment, e
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  job.Name,
-							Image: job.Spec.Deploy.Image,
-							EnvFrom: []corev1.EnvFromSource{
-								{
-									ConfigMapRef: &corev1.ConfigMapEnvSource{
-										LocalObjectReference: corev1.LocalObjectReference{
-											Name: job.Name,
-										},
-									},
-								},
-							},
+							Name:           job.Name,
+							Image:          job.Spec.Deploy.Image,
+							Env:            env,
 							LivenessProbe:  probe,
 							ReadinessProbe: probe,
 							VolumeMounts: []corev1.VolumeMount{

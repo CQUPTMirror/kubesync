@@ -71,12 +71,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
-	cm, err := r.desiredConfigMap(job, managerName)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	app, err := r.desiredDeployment(job)
+	app, err := r.desiredDeployment(job, managerName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -89,11 +84,6 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
 
 	err = r.Patch(ctx, &pvc, client.Apply, applyOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = r.Patch(ctx, &cm, client.Apply, applyOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -120,7 +110,6 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 func (r *JobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mirrorv1beta1.Job{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
