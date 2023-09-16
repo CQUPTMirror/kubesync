@@ -521,7 +521,7 @@ func PostJSON(mirrorID string, obj interface{}, client *http.Client) (*http.Resp
 	if err := json.NewEncoder(b).Encode(obj); err != nil {
 		return nil, err
 	}
-	return client.Post("", "application/json; charset=utf-8", b)
+	return client.Post(fmt.Sprintf("http://%s:6000", mirrorID), "application/json; charset=utf-8", b)
 }
 
 func (s *Manager) handleClientCmd(c *gin.Context) {
