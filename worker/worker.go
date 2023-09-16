@@ -272,10 +272,8 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	}
 }
 
-func (w *Worker) updateSchedInfo(nextScheduled time.Time) {
-	msg := internal.MirrorSchedule{
-		NextSchedule: nextScheduled.Unix(),
-	}
+func (w *Worker) updateSchedInfo(nextScheduled int64) {
+	msg := internal.MirrorSchedule{NextSchedule: nextScheduled}
 
 	url := fmt.Sprintf(
 		"%s/jobs/%s/schedule", w.cfg.APIBase, w.Name(),

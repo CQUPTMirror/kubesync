@@ -10,7 +10,7 @@ import (
 type schedule struct {
 	sync.Mutex
 	job           *mirrorJob
-	nextScheduled time.Time
+	nextScheduled int64
 	sched         bool
 }
 
@@ -19,7 +19,7 @@ func newSchedule() *schedule {
 	return queue
 }
 
-func (q *schedule) GetJob() (nextScheduled time.Time) {
+func (q *schedule) GetJob() (nextScheduled int64) {
 	if q.sched {
 		nextScheduled = q.nextScheduled
 	}
@@ -35,11 +35,11 @@ func (q *schedule) AddJob(schedTime int64, job *mirrorJob) {
 	}
 	q.job = job
 	q.sched = true
-	q.nextScheduled = time.Unix(schedTime, 0)
-	logger.Debugf("Added job %s @ %v", job.Name(), q.nextScheduled)
+	q.nextScheduled = schedTime
+	logger.Debugf("Added job %s @ %v", job.Name(), time.Unix(q.nextScheduled, 0))
 }
 
-// pop out the first job if it's time to run it
+// Pop out the first job if it's time to run it
 func (q *schedule) Pop() *mirrorJob {
 	q.Lock()
 	defer q.Unlock()
@@ -48,7 +48,7 @@ func (q *schedule) Pop() *mirrorJob {
 		return nil
 	}
 
-	t := q.nextScheduled
+	t := time.Unix(q.nextScheduled, 0)
 	if t.Before(time.Now()) {
 		job := q.job
 		q.sched = false

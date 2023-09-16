@@ -193,7 +193,7 @@ func GetIntEnv(key string, def int) int {
 	if !ex {
 		return def
 	}
-	if i, err := strconv.Atoi(val); err != nil {
+	if i, err := strconv.Atoi(val); err != nil || i == 0 {
 		return def
 	} else {
 		return i

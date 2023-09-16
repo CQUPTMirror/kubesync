@@ -222,7 +222,7 @@ func (m *mirrorJob) Run(managerChan chan<- jobMessage, semaphore chan empty) err
 			if syncErr == nil {
 				// syncing success
 				m.size = provider.DataSize()
-				managerChan <- jobMessage{v1beta1.Success, "", (m.State() == stateReady)}
+				managerChan <- jobMessage{v1beta1.Success, "", m.State() == stateReady}
 				return nil
 			}
 
