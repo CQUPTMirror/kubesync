@@ -261,7 +261,6 @@ func (s *Manager) listJob(c *gin.Context) {
 func (s *Manager) getJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 	var status internal.MirrorStatus
-	c.BindJSON(&status)
 
 	s.rwmu.Lock()
 	status, err := s.GetJob(c, mirrorID)
