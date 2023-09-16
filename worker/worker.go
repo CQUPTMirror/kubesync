@@ -5,6 +5,8 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
 	"net/http"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -125,6 +127,17 @@ func (w *Worker) makeHTTPServer() {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"msg": "OK"})
+	})
+	s.GET("/log", func(c *gin.Context) {
+		logger.Noticef("Return latest log")
+		filePath := filepath.Join(w.cfg.LogDir, "latest.log")
+		_, err := os.Stat(filePath)
+		if err != nil {
+			c.String(http.StatusNotFound, "log not found")
+			return
+		}
+		c.Header("Content-Type", "text/plain")
+		c.File(filePath)
 	})
 	w.httpEngine = s
 }

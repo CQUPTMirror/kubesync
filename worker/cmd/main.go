@@ -18,7 +18,10 @@ import (
 var logger = logging.MustGetLogger("tunasync")
 
 func startWorker(c *cli.Context) error {
-	gin.SetMode(gin.ReleaseMode)
+	worker.InitLogger(c.Bool("verbose"), c.Bool("debug"))
+	if !c.Bool("debug") {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
 	cfg, err := worker.LoadConfig()
 	if err != nil {
