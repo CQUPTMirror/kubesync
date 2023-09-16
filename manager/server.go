@@ -304,26 +304,34 @@ func (s *Manager) deleteJob(c *gin.Context) {
 // registerMirror register a newly-online mirror
 func (s *Manager) registerMirror(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var _mirror internal.MirrorStatus
-	_mirror.ID = mirrorID
-	_mirror.LastOnline = time.Now().Unix()
-	_mirror.LastRegister = time.Now().Unix()
 	s.rwmu.Lock()
-	err := s.UpdateJobStatus(c, _mirror)
+	status, err := s.GetJob(c, mirrorID)
 	s.rwmu.Unlock()
 
 	if err != nil {
-		err := fmt.Errorf("failed to register mirror: %s",
-			err.Error(),
+		runLog.Error(err, fmt.Sprintf("Failed to get status of job %s: %s", mirrorID, err.Error()))
+		s.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	status.LastOnline = time.Now().Unix()
+	status.LastRegister = time.Now().Unix()
+
+	s.rwmu.Lock()
+	err = s.UpdateJobStatus(c, status)
+	s.rwmu.Unlock()
+
+	if err != nil {
+		err := fmt.Errorf("failed to register mirror %s: %s",
+			mirrorID, err.Error(),
 		)
 		c.Error(err)
 		s.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
 
-	runLog.Info(fmt.Sprintf("Mirror <%s> registered", _mirror.ID))
-	// create mirrorCmd channel for this mirror
-	c.JSON(http.StatusOK, _mirror)
+	runLog.Info(fmt.Sprintf("Mirror <%s> registered", mirrorID))
+	c.JSON(http.StatusOK, status)
 }
 
 func (s *Manager) returnErrJSON(c *gin.Context, code int, err error) {
@@ -380,6 +388,7 @@ func (s *Manager) updateJob(c *gin.Context) {
 	curTime := time.Now().Unix()
 
 	status.LastOnline = curTime
+	status.LastRegister = curStatus.LastRegister
 
 	if status.Status == v1beta1.PreSyncing && curStatus.Status != v1beta1.PreSyncing {
 		status.LastStarted = curTime
