@@ -130,7 +130,7 @@ func (w *Worker) makeHTTPServer() {
 	})
 	s.GET("/log", func(c *gin.Context) {
 		logger.Noticef("Return latest log")
-		filePath := filepath.Join(w.cfg.LogDir, "latest.log")
+		filePath := filepath.Join(w.cfg.LogDir, "latest")
 		logger.Debugf("Get log from %s", filePath)
 		_, err := os.Stat(filePath)
 		if err != nil {

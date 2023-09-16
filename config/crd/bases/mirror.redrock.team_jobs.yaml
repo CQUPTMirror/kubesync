@@ -45,6 +45,8 @@ spec:
                     type: string
                   concurrent:
                     type: integer
+                  debug:
+                    type: string
                   interval:
                     type: integer
                   provider:
