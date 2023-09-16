@@ -29,7 +29,6 @@ func (r *JobReconciler) desiredConfigMap(job v1beta1.Job, manager string) (corev
 		},
 		Data: map[string]string{
 			"NAME":             job.Name,
-			"NAMESPACE":        job.Namespace,
 			"PROVIDER":         job.Spec.Config.Provider,
 			"UPSTREAM":         job.Spec.Config.Upstream,
 			"CONCURRENT":       strconv.Itoa(job.Spec.Config.Concurrent),

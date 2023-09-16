@@ -11,6 +11,8 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -178,10 +180,42 @@ func TranslateRsyncErrorCode(cmdErr error) (exitCode int, msg string) {
 	return
 }
 
-func GetEnv(key, def string) string {
+func GetStringEnv(key, def string) string {
 	val, ex := os.LookupEnv(key)
 	if !ex {
 		return def
 	}
 	return val
+}
+
+func GetIntEnv(key string, def int) int {
+	val, ex := os.LookupEnv(key)
+	if !ex {
+		return def
+	}
+	if i, err := strconv.Atoi(val); err != nil {
+		return def
+	} else {
+		return i
+	}
+}
+
+func GetBoolEnv(key string) bool {
+	val, ex := os.LookupEnv(key)
+	if !ex {
+		return false
+	}
+	if s, err := strconv.ParseBool(val); err != nil {
+		return false
+	} else {
+		return s
+	}
+}
+
+func GetListEnv(key string) []string {
+	val, ex := os.LookupEnv(key)
+	if !ex || val == "" {
+		return nil
+	}
+	return strings.Split(val, ";")
 }

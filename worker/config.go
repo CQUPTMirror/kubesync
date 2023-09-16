@@ -2,10 +2,7 @@ package worker
 
 import (
 	"errors"
-	"strconv"
-	"strings"
-
-	units "github.com/docker/go-units"
+	"github.com/docker/go-units"
 )
 
 // Config represents worker config options
@@ -64,7 +61,7 @@ func (m *MemBytes) Value() int64 {
 	return int64(*m)
 }
 
-// UnmarshalJSON is the customized unmarshaler for MemBytes
+// UnmarshalText is the customized unmarshaler for MemBytes
 func (m *MemBytes) UnmarshalText(s []byte) error {
 	val, err := units.RAMInBytes(string(s))
 	*m = MemBytes(val)
@@ -73,63 +70,46 @@ func (m *MemBytes) UnmarshalText(s []byte) error {
 
 // LoadConfig loads configuration
 func LoadConfig() (*Config, error) {
-	var err error
-
 	cfg := new(Config)
 
-	cfg.Name = GetEnv("NAME", "")
-	cfg.Provider = GetEnv("PROVIDER", "")
-	cfg.Upstream = GetEnv("UPSTREAM", "")
-	cfg.LogDir = GetEnv("LOG_DIR", "/var/log")
-	cfg.MirrorDir = GetEnv("MIRROR_DIR", "/data")
+	cfg.Name = GetStringEnv("NAME", "")
+	cfg.Provider = GetStringEnv("PROVIDER", "")
+	cfg.Upstream = GetStringEnv("UPSTREAM", "")
+	cfg.LogDir = GetStringEnv("LOG_DIR", "/var/log")
+	cfg.MirrorDir = GetStringEnv("MIRROR_DIR", "/data")
 
 	if cfg.Name == "" || cfg.Provider == "" || cfg.Upstream == "" {
-		return cfg, errors.New("Failed to get mirror config")
+		return cfg, errors.New("failed to get mirror config")
 	}
 
-	cfg.Concurrent, err = strconv.Atoi(GetEnv("CONCURRENT", "3"))
-	if err != nil {
-		return cfg, err
-	}
+	cfg.Concurrent = GetIntEnv("CONCURRENT", 3)
+	cfg.Interval = GetIntEnv("INTERVAL", 1440)
+	cfg.Retry = GetIntEnv("RETRY", 0)
+	cfg.Timeout = GetIntEnv("TIMEOUT", 0)
 
-	cfg.Interval, err = strconv.Atoi(GetEnv("INTERVAL", "1440"))
-	if err != nil {
-		return cfg, err
-	}
+	cfg.Command = GetStringEnv("COMMAND", "")
+	cfg.FailOnMatch = GetStringEnv("FAIL_ON_MATCH", "")
+	cfg.SizePattern = GetStringEnv("SIZE_PATTERN", "")
+	cfg.UseIPv6 = GetBoolEnv("IPV6")
+	cfg.UseIPv4 = GetBoolEnv("IPV4")
+	cfg.ExcludeFile = GetStringEnv("EXCLUDE_FILE", "")
+	cfg.RsyncNoTimeo = GetBoolEnv("RSYNC_NO_TIMEOUT")
+	cfg.RsyncTimeout = GetIntEnv("RSYNC_TIMEOUT", 0)
+	cfg.RsyncOptions = GetListEnv("RSYNC_OPTIONS")
+	cfg.RsyncOverride = GetListEnv("RSYNC_OVERRIDE")
+	cfg.Stage1Profile = GetStringEnv("STAGE1_PROFILE", "")
 
-	cfg.Retry, err = strconv.Atoi(GetEnv("RETRY", "0"))
-	if err != nil {
-		return cfg, err
-	}
+	cfg.ExecOnSuccess = GetListEnv("EXEC_ON_SUCCESS")
+	cfg.ExecOnFailure = GetListEnv("EXEC_ON_FAILURE")
 
-	cfg.Timeout, err = strconv.Atoi(GetEnv("TIMEOUT", "0"))
-	if err != nil {
-		return cfg, err
-	}
+	cfg.APIBase = GetStringEnv("API", "http://manager:3000")
+	cfg.Addr = GetStringEnv("ADDR", ":6000")
 
-	cfg.Command = GetEnv("COMMAND", "")
-	cfg.FailOnMatch = GetEnv("FAIL_ON_MATCH", "")
-	cfg.SizePattern = GetEnv("SIZE_PATTERN", "")
-	cfg.UseIPv6, _ = strconv.ParseBool(GetEnv("IPV6", ""))
-	cfg.UseIPv4, _ = strconv.ParseBool(GetEnv("IPV4", ""))
-	cfg.ExcludeFile = GetEnv("EXCLUDE_FILE", "")
-	cfg.RsyncNoTimeo, _ = strconv.ParseBool(GetEnv("RSYNC_NO_TIMEOUT", ""))
-	cfg.RsyncTimeout, _ = strconv.Atoi(GetEnv("RSYNC_TIMEOUT", ""))
-	cfg.RsyncOptions = strings.Split(GetEnv("RSYNC_OPTIONS", ""), ";")
-	cfg.RsyncOverride = strings.Split(GetEnv("RSYNC_OVERRIDE", ""), ";")
-	cfg.Stage1Profile = GetEnv("STAGE1_PROFILE", "")
+	cfg.ZFSEnable = GetBoolEnv("ZFS")
+	cfg.Zpool = GetStringEnv("ZPOOL", "")
 
-	cfg.ExecOnSuccess = strings.Split(GetEnv("EXEC_ON_SUCCESS", ""), ";")
-	cfg.ExecOnFailure = strings.Split(GetEnv("EXEC_ON_FAILURE", ""), ";")
-
-	cfg.APIBase = GetEnv("API", "")
-	cfg.Addr = GetEnv("ADDR", ":6000")
-
-	cfg.ZFSEnable, _ = strconv.ParseBool(GetEnv("ZFS", ""))
-	cfg.Zpool = GetEnv("ZPOOL", "")
-
-	cfg.BtrfsEnable, _ = strconv.ParseBool(GetEnv("BTRFS", ""))
-	cfg.SnapshotPath = GetEnv("SNAPSHOT_PATH", "")
+	cfg.BtrfsEnable = GetBoolEnv("BTRFS")
+	cfg.SnapshotPath = GetStringEnv("SNAPSHOT_PATH", "")
 
 	return cfg, nil
 }

@@ -28,6 +28,5 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 FROM debian:12-slim
 RUN apt update && apt install -y --no-install-recommends rsync && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /workspace/main /usr/bin
-USER 65532:65532
 
 ENTRYPOINT ["/usr/bin/main"]
