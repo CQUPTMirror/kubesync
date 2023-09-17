@@ -233,17 +233,18 @@ func (m *Manager) createJob(c *gin.Context) {
 	c.BindJSON(&jobSpec)
 
 	var e error
+	ojb := new(v1beta1.Job)
 	m.rwmu.Lock()
-	if ojb, err := m.GetJobRaw(c, mirrorID); err == nil || ojb != nil {
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err == nil || ojb != nil {
 		e = m.client.Patch(c.Request.Context(), &v1beta1.Job{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Job",
-				APIVersion: "mirror.redrock.team/v1beta1",
+				APIVersion: v1beta1.GroupVersion.String(),
 			}, ObjectMeta: metav1.ObjectMeta{
 				Name:      mirrorID,
 				Namespace: m.namespace,
 			}, Spec: jobSpec,
-		}, client.Apply)
+		}, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 	} else {
 		// TODO: compare change
 		return
