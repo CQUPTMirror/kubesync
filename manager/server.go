@@ -127,10 +127,11 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.GET("", s.getJob)
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
+		//mirrorValidateGroup.PATCH("", s.updateJobConfig)
 		// mirror online
-		mirrorValidateGroup.POST("", s.registerMirror)
+		mirrorValidateGroup.PUT("", s.registerMirror)
 		// post job status
-		mirrorValidateGroup.PATCH("", s.updateJob)
+		mirrorValidateGroup.POST("", s.updateJob)
 		mirrorValidateGroup.POST("size", s.updateMirrorSize) // TODO: kubelet_volume_stats_used_bytes method to get size
 		mirrorValidateGroup.POST("schedule", s.updateSchedule)
 		mirrorValidateGroup.POST("disable", s.disableJob)
@@ -302,13 +303,6 @@ func (m *Manager) getJobConfig(c *gin.Context) {
 
 func (m *Manager) getJobLatestLog(c *gin.Context) {
 	mirrorID := c.Param("id")
-	if mirrorID == "" {
-		// TODO: decide which mirror should do this mirror when MirrorID is null string
-		runLog.Info("handleClientCmd case mirrorID == \" \" not implemented yet")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
-
 	runLog.Info(fmt.Sprintf("Geting log from <%s>", mirrorID))
 
 	if m.httpClient == nil {
@@ -540,25 +534,25 @@ func (m *Manager) disableJob(c *gin.Context) {
 	m.rwmu.Unlock()
 
 	if err != nil {
+		runLog.Error(err, fmt.Sprintf("failed to get job %s: %s", mirrorID, err.Error()))
 		return
 	}
 
 	curStat.Status = v1beta1.Disabled
 	m.rwmu.Lock()
-	m.UpdateJobStatus(c, curStat)
+	err = m.UpdateJobStatus(c, curStat)
 	m.rwmu.Unlock()
 
-	// err = s.client.Delete(c.Request.Context(), job)
 	if err != nil {
-		err := fmt.Errorf("failed to delete mirror: %s",
+		err := fmt.Errorf("failed to disable mirror: %s",
 			err.Error(),
 		)
 		c.Error(err)
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	runLog.Info(fmt.Sprintf("Mirror <%s> deleted", mirrorID))
-	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
+	runLog.Info(fmt.Sprintf("Mirror <%s> disabled", mirrorID))
+	c.JSON(http.StatusOK, gin.H{_infoKey: "disabled"})
 }
 
 func (m *Manager) restartPod(c *gin.Context) {
@@ -583,12 +577,6 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 	mirrorID := c.Param("id")
 	var clientCmd internal.ClientCmd
 	c.BindJSON(&clientCmd)
-	if mirrorID == "" {
-		// TODO: decide which mirror should do this mirror when MirrorID is null string
-		runLog.Info("handleClientCmd case mirrorID == \" \" not implemented yet")
-		c.AbortWithStatus(http.StatusInternalServerError)
-		return
-	}
 
 	m.rwmu.Lock()
 	curStat, err := m.GetJob(c, mirrorID)

@@ -252,7 +252,12 @@ func (w *Worker) registerWorker() {
 		if client == nil {
 			client, _ = CreateHTTPClient()
 		}
-		if _, err := client.Post(url, "application/json; charset=utf-8", nil); err != nil {
+		req, err := http.NewRequest("PUT", url, nil)
+		if err != nil {
+			continue
+		}
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		if _, err := client.Do(req); err != nil {
 			logger.Errorf("Failed to register worker")
 			retry--
 			if retry > 0 {
@@ -282,7 +287,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		"%s/jobs/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := PatchJSON(url, smsg, w.httpClient); err != nil {
+	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
 		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
 }
