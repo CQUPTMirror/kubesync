@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"os"
 	"sync"
@@ -115,9 +116,6 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	// list jobs, status page
 	s.engine.GET("/jobs", s.listJob)
 
-	// create job
-	s.engine.POST("/job", s.createJob)
-
 	// mirrorID should be valid in this route group
 	mirrorValidateGroup := s.engine.Group("/jobs/:id")
 	{
@@ -127,7 +125,8 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.GET("", s.getJob)
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
-		//mirrorValidateGroup.PATCH("", s.updateJobConfig)
+		// create or patch job
+		mirrorValidateGroup.PATCH("", s.createJob)
 		// mirror online
 		mirrorValidateGroup.PUT("", s.registerMirror)
 		// post job status
@@ -229,12 +228,37 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 }
 
 func (m *Manager) createJob(c *gin.Context) {
-	// ctx context.Context, c internal.MirrorConfig) error
-	//job := &v1beta1.Job{
-	//	ObjectMeta: metav1.ObjectMeta{Name: c.ID, Namespace: m.namespace},
-	//	Spec:       c.JobSpec,
-	//}
-	//return m.client.Create(ctx, job)
+	mirrorID := c.Param("id")
+	var jobSpec v1beta1.JobSpec
+	c.BindJSON(&jobSpec)
+
+	var e error
+	m.rwmu.Lock()
+	if ojb, err := m.GetJobRaw(c, mirrorID); err == nil || ojb != nil {
+		e = m.client.Patch(c.Request.Context(), &v1beta1.Job{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Job",
+				APIVersion: "mirror.redrock.team/v1beta1",
+			}, ObjectMeta: metav1.ObjectMeta{
+				Name:      mirrorID,
+				Namespace: m.namespace,
+			}, Spec: jobSpec,
+		}, client.Apply)
+	} else {
+		// TODO: compare change
+		return
+	}
+	defer m.rwmu.Unlock()
+
+	if e != nil {
+		err := fmt.Errorf("failed to patch job %s: %s",
+			mirrorID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + mirrorID + " succeed"})
 }
 
 // listJob respond with all jobs of specified mirrors
@@ -556,6 +580,7 @@ func (m *Manager) disableJob(c *gin.Context) {
 }
 
 func (m *Manager) restartPod(c *gin.Context) {
+	// TODO: delete pod of mirror
 }
 
 // PostJSON posts json object to url
