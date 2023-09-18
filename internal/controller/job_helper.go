@@ -151,7 +151,27 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	if r.Config.FrontImage != "" {
+	disableFront, disableRsync := false, false
+	frontImage, rsyncImage := r.Config.FrontImage, r.Config.RsyncImage
+	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
+		disableFront = s
+		if job.Spec.Deploy.FrontImage != "" {
+			frontImage = job.Spec.Deploy.FrontImage
+		}
+		if frontImage == "" {
+			disableFront = true
+		}
+	}
+	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableRsync); err == nil {
+		disableRsync = s
+		if job.Spec.Deploy.RsyncImage != "" {
+			rsyncImage = job.Spec.Deploy.RsyncImage
+		}
+		if rsyncImage == "" {
+			disableRsync = true
+		}
+	}
+	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(FrontPort)},
@@ -164,7 +184,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 		}
 		frontContainer := corev1.Container{
 			Name:            job.Name + "-front",
-			Image:           r.Config.FrontImage,
+			Image:           frontImage,
 			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
 			LivenessProbe:   frontProbe,
 			ReadinessProbe:  frontProbe,
@@ -180,7 +200,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 		}
 		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, frontContainer)
 	}
-	if r.Config.RsyncImage != "" {
+	if !disableRsync {
 		rsyncProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
 				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(RsyncPort)},
@@ -193,7 +213,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 		}
 		rsyncContainer := corev1.Container{
 			Name:            job.Name + "-rsync",
-			Image:           r.Config.RsyncImage,
+			Image:           rsyncImage,
 			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
 			LivenessProbe:   rsyncProbe,
 			ReadinessProbe:  rsyncProbe,

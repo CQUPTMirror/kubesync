@@ -122,11 +122,11 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		// delete specified mirror
 		mirrorValidateGroup.DELETE("", s.deleteJob)
 		// get job detail
-		mirrorValidateGroup.GET("", s.getJob)
+		mirrorValidateGroup.GET("", s.getJob) // TODO: top
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
 		// create or patch job
-		mirrorValidateGroup.PATCH("", s.createJob)
+		mirrorValidateGroup.PATCH("", s.createJob) // TODO: create front ingress
 		// mirror online
 		mirrorValidateGroup.PUT("", s.registerMirror)
 		// post job status
@@ -227,6 +227,64 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 	return err
 }
 
+func handleMerge(c *gin.Context, old *v1beta1.JobSpec, new *v1beta1.JobSpec) (merged *v1beta1.JobSpec) {
+	oJobBytes, err := json.Marshal(old)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var oJobSpec map[string]interface{}
+	if err = json.Unmarshal(oJobBytes, &oJobSpec); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	jobBytes, err := json.Marshal(new)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var jobSpec map[string]interface{}
+	if err = json.Unmarshal(jobBytes, &jobSpec); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	if val, ok := jobSpec["config"]; ok {
+		switch vval := val.(type) {
+		case map[string]interface{}:
+			for k, v := range vval {
+				oJobSpec[k] = v
+			}
+		}
+	}
+	if val, ok := jobSpec["deploy"]; ok {
+		switch vval := val.(type) {
+		case map[string]interface{}:
+			for k, v := range vval {
+				oJobSpec[k] = v
+			}
+		}
+	}
+	if val, ok := jobSpec["volume"]; ok {
+		switch vval := val.(type) {
+		case map[string]interface{}:
+			for k, v := range vval {
+				oJobSpec[k] = v
+			}
+		}
+	}
+	nJobBytes, err := json.Marshal(oJobSpec)
+	if err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	var nJobSpec v1beta1.JobSpec
+	if err = json.Unmarshal(nJobBytes, &nJobSpec); err != nil {
+		c.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	return &nJobSpec
+}
+
 func (m *Manager) createJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 	var jobSpec v1beta1.JobSpec
@@ -235,21 +293,23 @@ func (m *Manager) createJob(c *gin.Context) {
 	var e error
 	ojb := new(v1beta1.Job)
 	m.rwmu.Lock()
-	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err == nil || ojb != nil {
-		e = m.client.Patch(c.Request.Context(), &v1beta1.Job{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Job",
-				APIVersion: v1beta1.GroupVersion.String(),
-			}, ObjectMeta: metav1.ObjectMeta{
-				Name:      mirrorID,
-				Namespace: m.namespace,
-			}, Spec: jobSpec,
-		}, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
-	} else {
-		// TODO: compare change
-		return
-	}
 	defer m.rwmu.Unlock()
+	job := v1beta1.Job{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Job",
+			APIVersion: v1beta1.GroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      mirrorID,
+			Namespace: m.namespace,
+		},
+	}
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err == nil || ojb != nil {
+		job.Spec = jobSpec
+	} else {
+		job.Spec = *handleMerge(c, &ojb.Spec, &jobSpec)
+	}
+	e = m.client.Patch(c.Request.Context(), &job, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 
 	if e != nil {
 		err := fmt.Errorf("failed to patch job %s: %s",

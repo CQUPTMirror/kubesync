@@ -36,6 +36,15 @@ type JobConfig struct {
 	Debug           string `json:"debug,omitempty"`
 }
 
+type JobDeploy struct {
+	DeployConfig `json:",inline"`
+
+	DisableFront string `json:"disableFront,omitempty"`
+	FrontImage   string `json:"frontImage,omitempty"`
+	DisableRsync string `json:"disableRsync,omitempty"`
+	RsyncImage   string `json:"rsyncImage,omitempty"`
+}
+
 type PVConfig struct {
 	Size         string                            `json:"size"`
 	StorageClass *string                           `json:"storageClass,omitempty"`
@@ -44,9 +53,9 @@ type PVConfig struct {
 
 // JobSpec defines the desired state of Job
 type JobSpec struct {
-	Config JobConfig    `json:"config"`
-	Deploy DeployConfig `json:"deploy"`
-	Volume PVConfig     `json:"volume"`
+	Config JobConfig `json:"config"`
+	Deploy JobDeploy `json:"deploy"`
+	Volume PVConfig  `json:"volume"`
 }
 
 type SyncStatus string

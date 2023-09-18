@@ -31,7 +31,12 @@ type DeployConfig struct {
 	Tolerations      []corev1.Toleration           `json:"tolerations,omitempty"`
 	CPULimit         string                        `json:"cpuLimit,omitempty"`
 	MemoryLimit      string                        `json:"memLimit,omitempty"`
-	ServiceAccount   string                        `json:"serviceAccount,omitempty"`
+}
+
+type ManagerDeploy struct {
+	DeployConfig `json:",inline"`
+
+	ServiceAccount string `json:"serviceAccount,omitempty"`
 }
 
 type DeployPhase string
@@ -44,7 +49,7 @@ const (
 
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy DeployConfig `json:"deploy"`
+	Deploy ManagerDeploy `json:"deploy"`
 }
 
 // ManagerStatus defines the observed state of Manager
