@@ -19,6 +19,29 @@ const (
 	RsyncPort = 873
 )
 
+func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontImage, rsyncImage string) {
+	frontImage, rsyncImage = r.Config.FrontImage, r.Config.RsyncImage
+	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
+		disableFront = s
+	}
+	if job.Spec.Deploy.FrontImage != "" {
+		frontImage = job.Spec.Deploy.FrontImage
+	}
+	if frontImage == "" {
+		disableFront = true
+	}
+	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableRsync); err == nil {
+		disableRsync = s
+	}
+	if job.Spec.Deploy.RsyncImage != "" {
+		rsyncImage = job.Spec.Deploy.RsyncImage
+	}
+	if rsyncImage == "" {
+		disableRsync = true
+	}
+	return
+}
+
 func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.PersistentVolumeClaim, error) {
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
@@ -151,26 +174,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	disableFront, disableRsync := false, false
-	frontImage, rsyncImage := r.Config.FrontImage, r.Config.RsyncImage
-	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
-		disableFront = s
-		if job.Spec.Deploy.FrontImage != "" {
-			frontImage = job.Spec.Deploy.FrontImage
-		}
-		if frontImage == "" {
-			disableFront = true
-		}
-	}
-	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableRsync); err == nil {
-		disableRsync = s
-		if job.Spec.Deploy.RsyncImage != "" {
-			rsyncImage = job.Spec.Deploy.RsyncImage
-		}
-		if rsyncImage == "" {
-			disableRsync = true
-		}
-	}
+	disableFront, disableRsync, frontImage, rsyncImage := r.checkRsyncFront(&job)
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -252,10 +256,11 @@ func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) 
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	if r.Config.FrontImage != "" {
+	disableFront, disableRsync, _, _ := r.checkRsyncFront(&job)
+	if !disableFront {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: FrontPort, Protocol: "TCP", TargetPort: intstr.FromString("front")})
 	}
-	if r.Config.RsyncImage != "" {
+	if !disableRsync {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "rsync", Port: RsyncPort, Protocol: "TCP", TargetPort: intstr.FromString("rsync")})
 	}
 

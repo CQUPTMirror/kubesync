@@ -122,7 +122,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		// delete specified mirror
 		mirrorValidateGroup.DELETE("", s.deleteJob)
 		// get job detail
-		mirrorValidateGroup.GET("", s.getJob) // TODO: top
+		mirrorValidateGroup.GET("", s.getJob)
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
 		// create or patch job
@@ -131,10 +131,9 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.PUT("", s.registerMirror)
 		// post job status
 		mirrorValidateGroup.POST("", s.updateJob)
-		mirrorValidateGroup.POST("size", s.updateMirrorSize) // TODO: kubelet_volume_stats_used_bytes method to get size
+		mirrorValidateGroup.POST("size", s.updateMirrorSize)
 		mirrorValidateGroup.POST("schedule", s.updateSchedule)
 		mirrorValidateGroup.POST("disable", s.disableJob)
-		mirrorValidateGroup.DELETE("pod", s.restartPod)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST("cmd", s.handleClientCmd)
 	}
@@ -638,10 +637,6 @@ func (m *Manager) disableJob(c *gin.Context) {
 	}
 	runLog.Info(fmt.Sprintf("Mirror <%s> disabled", mirrorID))
 	c.JSON(http.StatusOK, gin.H{_infoKey: "disabled"})
-}
-
-func (m *Manager) restartPod(c *gin.Context) {
-	// TODO: delete pod of mirror
 }
 
 // PostJSON posts json object to url
