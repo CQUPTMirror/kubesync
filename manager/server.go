@@ -140,6 +140,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.POST("", s.updateJob)
 		mirrorValidateGroup.POST("size", s.updateMirrorSize)
 		mirrorValidateGroup.POST("schedule", s.updateSchedule)
+		mirrorValidateGroup.POST("enable", s.enableJob)
 		mirrorValidateGroup.POST("disable", s.disableJob)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST("cmd", s.handleClientCmd)
@@ -580,6 +581,31 @@ func (m *Manager) updateMirrorSize(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, status)
+}
+
+func (m *Manager) enableJob(c *gin.Context) {
+	mirrorID := c.Param("id")
+
+	curStat, err := m.GetJob(c, mirrorID)
+
+	if err != nil {
+		runLog.Error(err, fmt.Sprintf("failed to get job %s: %s", mirrorID, err.Error()))
+		return
+	}
+
+	curStat.Status = v1beta1.None
+	err = m.UpdateJobStatus(c, curStat)
+
+	if err != nil {
+		err := fmt.Errorf("failed to enable mirror: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	runLog.Info(fmt.Sprintf("Mirror <%s> enabled", mirrorID))
+	c.JSON(http.StatusOK, gin.H{_infoKey: "enabled"})
 }
 
 func (m *Manager) disableJob(c *gin.Context) {
