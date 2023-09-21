@@ -6,6 +6,7 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -268,4 +269,79 @@ func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) 
 		return svc, err
 	}
 	return svc, nil
+}
+
+func (r *JobReconciler) desiredIngress(job v1beta1.Job) (v1.Ingress, error) {
+	annotations := make(map[string]string)
+	for k, v := range r.Config.FrontAnn {
+		annotations[k] = v
+	}
+	for k, v := range job.Spec.Ingress.Annotations {
+		annotations[k] = v
+	}
+
+	pathType := v1.PathTypePrefix
+
+	ig := v1.Ingress{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Ingress"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        job.Name,
+			Namespace:   job.Namespace,
+			Labels:      map[string]string{"job": job.Name},
+			Annotations: annotations,
+		},
+		Spec: v1.IngressSpec{
+			Rules: []v1.IngressRule{
+				{
+					IngressRuleValue: v1.IngressRuleValue{
+						HTTP: &v1.HTTPIngressRuleValue{
+							Paths: []v1.HTTPIngressPath{
+								{
+									Path:     "/" + job.Name,
+									PathType: &pathType,
+									Backend: v1.IngressBackend{
+										Service: &v1.IngressServiceBackend{
+											Name: job.Name,
+											Port: v1.ServiceBackendPort{Name: "front"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if r.Config.FrontClass != "" || job.Spec.Ingress.IngressClass != "" {
+		ig.Spec.IngressClassName = &r.Config.FrontClass
+		if job.Spec.Ingress.IngressClass != "" {
+			ig.Spec.IngressClassName = &job.Spec.Ingress.IngressClass
+		}
+	}
+
+	if r.Config.FrontTLS != "" || job.Spec.Ingress.TLSSecret != "" {
+		secretName := r.Config.FrontTLS
+		if job.Spec.Ingress.TLSSecret != "" {
+			secretName = job.Spec.Ingress.TLSSecret
+		}
+		ig.Spec.TLS = []v1.IngressTLS{{SecretName: secretName}}
+	}
+
+	if r.Config.FrontHost != "" || job.Spec.Ingress.Host != "" {
+		ig.Spec.Rules[0].Host = r.Config.FrontHost
+		if job.Spec.Ingress.Host != "" {
+			ig.Spec.Rules[0].Host = job.Spec.Ingress.Host
+		}
+	}
+
+	if job.Spec.Ingress.Path != "" {
+		ig.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path = job.Spec.Ingress.Path
+	}
+
+	if err := ctrl.SetControllerReference(&job, &ig, r.Scheme); err != nil {
+		return ig, err
+	}
+	return ig, nil
 }

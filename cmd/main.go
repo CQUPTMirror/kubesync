@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -89,10 +90,28 @@ func main() {
 		os.Exit(1)
 	}
 
+	annString := os.Getenv("FRONT_ANN")
+	annItems := make(map[string]string)
+	if annString != "" {
+		for _, item := range strings.Split(annString, ";") {
+			splits := strings.Split(item, "=")
+			if len(splits) == 2 {
+				annItems[splits[0]] = splits[1]
+			}
+		}
+	}
+
 	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: controller.Config{FrontImage: os.Getenv("FRONT_IMAGE"), RsyncImage: os.Getenv("RSYNC_IMAGE")},
+		Config: &controller.Config{
+			FrontImage: os.Getenv("FRONT_IMAGE"),
+			RsyncImage: os.Getenv("RSYNC_IMAGE"),
+			FrontHost:  os.Getenv("FRONT_HOST"),
+			FrontTLS:   os.Getenv("FRONT_TLS"),
+			FrontClass: os.Getenv("FRONT_CLASS"),
+			FrontAnn:   annItems,
+		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Job")
 		os.Exit(1)

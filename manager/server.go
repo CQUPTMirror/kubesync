@@ -115,9 +115,10 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 
 	// list jobs, status page
 	s.engine.GET("/jobs", s.listJob)
+	s.engine.GET("/static/tunasync.json", s.listJob)
 
 	// mirrorID should be valid in this route group
-	mirrorValidateGroup := s.engine.Group("/jobs/:id")
+	mirrorValidateGroup := s.engine.Group("/job/:id")
 	{
 		// delete specified mirror
 		mirrorValidateGroup.DELETE("", s.deleteJob)
@@ -126,7 +127,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
 		// create or patch job
-		mirrorValidateGroup.PATCH("", s.createJob) // TODO: create front ingress
+		mirrorValidateGroup.PATCH("", s.createJob)
 		// mirror online
 		mirrorValidateGroup.PUT("", s.registerMirror)
 		// post job status
@@ -677,13 +678,23 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 
 	runLog.Info(fmt.Sprintf("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID))
 	// post command to mirror
-	_, err = PostJSON(mirrorID, clientCmd, m.httpClient)
+	r, err := PostJSON(mirrorID, clientCmd, m.httpClient)
 	if err != nil {
 		err := fmt.Errorf("post command to mirror %s fail: %s", mirrorID, err.Error())
 		c.Error(err)
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	// TODO: check response for success
-	c.JSON(http.StatusOK, gin.H{_infoKey: "successfully send command to mirror " + mirrorID})
+	if r.StatusCode == 200 {
+		c.JSON(http.StatusOK, gin.H{_infoKey: "successfully send command to mirror " + mirrorID})
+	} else {
+		defer r.Body.Close()
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			c.Error(err)
+			m.returnErrJSON(c, http.StatusInternalServerError, err)
+			return
+		}
+		c.String(r.StatusCode, string(body))
+	}
 }

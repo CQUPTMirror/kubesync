@@ -21,6 +21,7 @@ import (
 	"errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,13 +33,17 @@ import (
 type Config struct {
 	FrontImage string
 	RsyncImage string
+	FrontHost  string
+	FrontTLS   string
+	FrontClass string
+	FrontAnn   map[string]string
 }
 
 // JobReconciler reconciles a Job object
 type JobReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
-	Config Config
+	Config *Config
 }
 
 //+kubebuilder:rbac:groups=mirror.redrock.team,resources=jobs,verbs=get;list;watch;create;update;patch;delete
@@ -81,6 +86,15 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	var ig v1.Ingress
+	disableFront, _, _, _ := r.checkRsyncFront(&job)
+	if !disableFront {
+		ig, err = r.desiredIngress(job)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
 
 	err = r.Patch(ctx, &pvc, client.Apply, applyOpts...)
@@ -98,6 +112,13 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, err
 	}
 
+	if !disableFront {
+		err = r.Patch(ctx, &ig, client.Apply, applyOpts...)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	err = r.Status().Update(ctx, &job)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -113,5 +134,6 @@ func (r *JobReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.PersistentVolumeClaim{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
+		Owns(&v1.Ingress{}).
 		Complete(r)
 }

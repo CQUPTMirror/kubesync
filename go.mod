@@ -13,7 +13,7 @@ require (
 	github.com/onsi/gomega v1.24.1
 	github.com/pkg/profile v1.7.0
 	github.com/urfave/cli v1.22.14
-	golang.org/x/sys v0.8.0
+	golang.org/x/sys v0.12.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	k8s.io/api v0.26.1
 	k8s.io/apimachinery v0.26.1
@@ -44,7 +44,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.14.0 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
