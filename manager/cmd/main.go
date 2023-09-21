@@ -49,7 +49,11 @@ func init() {
 
 func main() {
 	var apiAddr string
-	flag.StringVar(&apiAddr, "port", ":3000", "The port the api endpoint binds to.")
+	addrEnv := os.Getenv("ADDR")
+	if addrEnv == "" {
+		addrEnv = ":3000"
+	}
+	flag.StringVar(&apiAddr, "addr", addrEnv, "The port the api endpoint binds to.")
 	opts := zap.Options{
 		Development: true,
 	}

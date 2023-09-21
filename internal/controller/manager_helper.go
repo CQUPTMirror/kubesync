@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -41,9 +42,12 @@ func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.D
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:           manager.Name,
-							Image:          manager.Spec.Deploy.Image,
-							Env:            []corev1.EnvVar{{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}}},
+							Name:  manager.Name,
+							Image: manager.Spec.Deploy.Image,
+							Env: []corev1.EnvVar{
+								{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+								{Name: "ADDR", Value: fmt.Sprintf(":%d", ManagerPort)},
+							},
 							LivenessProbe:  probe,
 							ReadinessProbe: probe,
 							Ports: []corev1.ContainerPort{

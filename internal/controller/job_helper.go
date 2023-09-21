@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -82,11 +83,27 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 		{Name: "RETRY", Value: strconv.Itoa(job.Spec.Config.Retry)},
 		{Name: "TIMEOUT", Value: strconv.Itoa(job.Spec.Config.Timeout)},
 		{Name: "COMMAND", Value: job.Spec.Config.Command},
+		{Name: "FAIL_ON_MATCH", Value: job.Spec.Config.FailOnMatch},
 		{Name: "SIZE_PATTERN", Value: job.Spec.Config.SizePattern},
+		{Name: "IPV6", Value: job.Spec.Config.IPv6Only},
+		{Name: "IPV4", Value: job.Spec.Config.IPv4Only},
+		{Name: "EXCLUDE_FILE", Value: job.Spec.Config.ExcludeFile},
 		{Name: "RSYNC_OPTIONS", Value: job.Spec.Config.RsyncOptions},
-		{Name: "ADDITION_OPTIONS", Value: job.Spec.Config.AdditionOptions},
+		{Name: "STAGE1_PROFILE", Value: job.Spec.Config.Stage1Profile},
+		{Name: "EXEC_ON_SUCCESS", Value: job.Spec.Config.ExecOnSuccess},
+		{Name: "EXEC_ON_FAILURE", Value: job.Spec.Config.ExecOnFailure},
 		{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
+		{Name: "ADDR", Value: fmt.Sprintf(":%d", ApiPort)},
 	}
+	if job.Spec.Config.AdditionEnvs != "" {
+		for _, item := range strings.Split(job.Spec.Config.AdditionEnvs, ";") {
+			splits := strings.Split(item, "=")
+			if len(splits) == 2 {
+				env = append(env, corev1.EnvVar{Name: splits[0], Value: splits[1]})
+			}
+		}
+	}
+
 	if job.Spec.Config.Provider == "" || job.Spec.Config.Upstream == "" {
 		return appsv1.Deployment{}, errors.New("provider or upstream not set")
 	}

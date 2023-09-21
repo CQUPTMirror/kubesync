@@ -37,7 +37,11 @@ spec:
             properties:
               config:
                 properties:
-                  addition_options:
+                  IPv4Only:
+                    type: string
+                  IPv6Only:
+                    type: string
+                  additionEnvs:
                     type: string
                   alias:
                     type: string
@@ -47,15 +51,25 @@ spec:
                     type: integer
                   debug:
                     type: string
+                  excludeFile:
+                    type: string
+                  execOnFailure:
+                    type: string
+                  execOnSuccess:
+                    type: string
+                  failOnMatch:
+                    type: string
                   interval:
                     type: integer
                   provider:
                     type: string
                   retry:
                     type: integer
-                  rsync_options:
+                  rsyncOptions:
                     type: string
-                  size_pattern:
+                  sizePattern:
+                    type: string
+                  stage1Profile:
                     type: string
                   timeout:
                     type: integer
