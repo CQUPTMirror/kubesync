@@ -20,8 +20,10 @@ import (
 	"context"
 	"errors"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,25 +73,25 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		managerName = managerList.Items[0].Name
 	}
 
-	pvc, err := r.desiredPersistentVolumeClaim(job)
+	pvc, err := r.desiredPersistentVolumeClaim(&job)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	app, err := r.desiredDeployment(job, managerName)
+	app, err := r.desiredDeployment(&job, managerName)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	svc, err := r.desiredService(job)
+	svc, err := r.desiredService(&job)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	var ig v1.Ingress
+	var ig *v1.Ingress
 	disableFront, _, _, _ := r.checkRsyncFront(&job)
 	if !disableFront {
-		ig, err = r.desiredIngress(job)
+		ig, err = r.desiredIngress(&job)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -97,25 +99,44 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
 
-	err = r.Patch(ctx, &pvc, client.Apply, applyOpts...)
+	err = r.Patch(ctx, pvc, client.Apply, applyOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.Patch(ctx, &app, client.Apply, applyOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = r.Patch(ctx, &svc, client.Apply, applyOpts...)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if !disableFront {
-		err = r.Patch(ctx, &ig, client.Apply, applyOpts...)
+	if app != nil {
+		err = r.Patch(ctx, app, client.Apply, applyOpts...)
 		if err != nil {
 			return ctrl.Result{}, err
+		}
+
+		err = r.Patch(ctx, svc, client.Apply, applyOpts...)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		if !disableFront {
+			err = r.Patch(ctx, ig, client.Apply, applyOpts...)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	} else {
+		deploy := new(v1beta1.Deployment)
+		err := r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, deploy)
+		if err == nil || deploy != nil {
+			r.Delete(ctx, &v1.Ingress{
+				TypeMeta:   metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Ingress"},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
+			r.Delete(ctx, &corev1.Service{
+				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
+			r.Delete(ctx, &appsv1.Deployment{
+				TypeMeta:   metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
 		}
 	}
 

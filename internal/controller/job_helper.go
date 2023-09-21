@@ -44,7 +44,7 @@ func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disable
 	return
 }
 
-func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.PersistentVolumeClaim, error) {
+func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.PersistentVolumeClaim, error) {
 	pvc := corev1.PersistentVolumeClaim{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "PersistentVolumeClaim"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -67,59 +67,13 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job v1beta1.Job) (corev1.Pe
 		pvc.Spec.StorageClassName = job.Spec.Volume.StorageClass
 	}
 
-	if err := ctrl.SetControllerReference(&job, &pvc, r.Scheme); err != nil {
-		return pvc, err
+	if err := ctrl.SetControllerReference(job, &pvc, r.Scheme); err != nil {
+		return &pvc, err
 	}
-	return pvc, nil
+	return &pvc, nil
 }
 
-func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (appsv1.Deployment, error) {
-	env := []corev1.EnvVar{
-		{Name: "NAME", Value: job.Name},
-		{Name: "PROVIDER", Value: job.Spec.Config.Provider},
-		{Name: "UPSTREAM", Value: job.Spec.Config.Upstream},
-		{Name: "CONCURRENT", Value: strconv.Itoa(job.Spec.Config.Concurrent)},
-		{Name: "INTERVAL", Value: strconv.Itoa(job.Spec.Config.Interval)},
-		{Name: "RETRY", Value: strconv.Itoa(job.Spec.Config.Retry)},
-		{Name: "TIMEOUT", Value: strconv.Itoa(job.Spec.Config.Timeout)},
-		{Name: "COMMAND", Value: job.Spec.Config.Command},
-		{Name: "FAIL_ON_MATCH", Value: job.Spec.Config.FailOnMatch},
-		{Name: "SIZE_PATTERN", Value: job.Spec.Config.SizePattern},
-		{Name: "IPV6", Value: job.Spec.Config.IPv6Only},
-		{Name: "IPV4", Value: job.Spec.Config.IPv4Only},
-		{Name: "EXCLUDE_FILE", Value: job.Spec.Config.ExcludeFile},
-		{Name: "RSYNC_OPTIONS", Value: job.Spec.Config.RsyncOptions},
-		{Name: "STAGE1_PROFILE", Value: job.Spec.Config.Stage1Profile},
-		{Name: "EXEC_ON_SUCCESS", Value: job.Spec.Config.ExecOnSuccess},
-		{Name: "EXEC_ON_FAILURE", Value: job.Spec.Config.ExecOnFailure},
-		{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
-		{Name: "ADDR", Value: fmt.Sprintf(":%d", ApiPort)},
-	}
-	if job.Spec.Config.AdditionEnvs != "" {
-		for _, item := range strings.Split(job.Spec.Config.AdditionEnvs, ";") {
-			splits := strings.Split(item, "=")
-			if len(splits) == 2 {
-				env = append(env, corev1.EnvVar{Name: splits[0], Value: splits[1]})
-			}
-		}
-	}
-
-	if job.Spec.Config.Provider == "" || job.Spec.Config.Upstream == "" {
-		return appsv1.Deployment{}, errors.New("provider or upstream not set")
-	}
-	if job.Spec.Config.Debug != "" {
-		env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
-	}
-	probe := &corev1.Probe{
-		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
-		},
-		InitialDelaySeconds: 10,
-		TimeoutSeconds:      5,
-		PeriodSeconds:       30,
-		SuccessThreshold:    1,
-		FailureThreshold:    5,
-	}
+func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*appsv1.Deployment, error) {
 	app := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -136,24 +90,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 					Labels: map[string]string{"job": job.Name},
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:           job.Name,
-							Image:          job.Spec.Deploy.Image,
-							Env:            env,
-							LivenessProbe:  probe,
-							ReadinessProbe: probe,
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      job.Name,
-									MountPath: "/data/" + job.Name,
-								},
-							},
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: ApiPort, Name: "api", Protocol: "TCP"},
-							},
-						},
-					},
+					Containers: []corev1.Container{},
 					Volumes: []corev1.Volume{
 						{
 							Name: job.Name,
@@ -168,18 +105,84 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 			},
 		},
 	}
-	if job.Spec.Deploy.ImagePullPolicy != "" {
-		app.Spec.Template.Spec.Containers[0].ImagePullPolicy = job.Spec.Deploy.ImagePullPolicy
-	}
-	if job.Spec.Deploy.MemoryLimit != "" || job.Spec.Deploy.CPULimit != "" {
-		app.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
-		if job.Spec.Deploy.MemoryLimit != "" {
-			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsMemory] = resource.MustParse(job.Spec.Deploy.MemoryLimit)
+
+	if job.Status.Status != v1beta1.Disabled {
+		env := []corev1.EnvVar{
+			{Name: "NAME", Value: job.Name},
+			{Name: "PROVIDER", Value: job.Spec.Config.Provider},
+			{Name: "UPSTREAM", Value: job.Spec.Config.Upstream},
+			{Name: "CONCURRENT", Value: strconv.Itoa(job.Spec.Config.Concurrent)},
+			{Name: "INTERVAL", Value: strconv.Itoa(job.Spec.Config.Interval)},
+			{Name: "RETRY", Value: strconv.Itoa(job.Spec.Config.Retry)},
+			{Name: "TIMEOUT", Value: strconv.Itoa(job.Spec.Config.Timeout)},
+			{Name: "COMMAND", Value: job.Spec.Config.Command},
+			{Name: "FAIL_ON_MATCH", Value: job.Spec.Config.FailOnMatch},
+			{Name: "SIZE_PATTERN", Value: job.Spec.Config.SizePattern},
+			{Name: "IPV6", Value: job.Spec.Config.IPv6Only},
+			{Name: "IPV4", Value: job.Spec.Config.IPv4Only},
+			{Name: "EXCLUDE_FILE", Value: job.Spec.Config.ExcludeFile},
+			{Name: "RSYNC_OPTIONS", Value: job.Spec.Config.RsyncOptions},
+			{Name: "STAGE1_PROFILE", Value: job.Spec.Config.Stage1Profile},
+			{Name: "EXEC_ON_SUCCESS", Value: job.Spec.Config.ExecOnSuccess},
+			{Name: "EXEC_ON_FAILURE", Value: job.Spec.Config.ExecOnFailure},
+			{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
+			{Name: "ADDR", Value: fmt.Sprintf(":%d", ApiPort)},
 		}
-		if job.Spec.Deploy.CPULimit != "" {
-			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(job.Spec.Deploy.CPULimit)
+		if job.Spec.Config.AdditionEnvs != "" {
+			for _, item := range strings.Split(job.Spec.Config.AdditionEnvs, ";") {
+				splits := strings.Split(item, "=")
+				if len(splits) == 2 {
+					env = append(env, corev1.EnvVar{Name: splits[0], Value: splits[1]})
+				}
+			}
 		}
+		if job.Spec.Config.Provider == "" || job.Spec.Config.Upstream == "" {
+			return nil, errors.New("provider or upstream not set")
+		}
+		if job.Spec.Config.Debug != "" {
+			env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
+		}
+		probe := &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
+			},
+			InitialDelaySeconds: 10,
+			TimeoutSeconds:      5,
+			PeriodSeconds:       30,
+			SuccessThreshold:    1,
+			FailureThreshold:    5,
+		}
+		container := corev1.Container{
+			Name:           job.Name,
+			Image:          job.Spec.Deploy.Image,
+			Env:            env,
+			LivenessProbe:  probe,
+			ReadinessProbe: probe,
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      job.Name,
+					MountPath: "/data/" + job.Name,
+				},
+			},
+			Ports: []corev1.ContainerPort{
+				{ContainerPort: ApiPort, Name: "api", Protocol: "TCP"},
+			},
+		}
+		if job.Spec.Deploy.ImagePullPolicy != "" {
+			container.ImagePullPolicy = job.Spec.Deploy.ImagePullPolicy
+		}
+		if job.Spec.Deploy.MemoryLimit != "" || job.Spec.Deploy.CPULimit != "" {
+			container.Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
+			if job.Spec.Deploy.MemoryLimit != "" {
+				container.Resources.Limits[corev1.ResourceLimitsMemory] = resource.MustParse(job.Spec.Deploy.MemoryLimit)
+			}
+			if job.Spec.Deploy.CPULimit != "" {
+				container.Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(job.Spec.Deploy.CPULimit)
+			}
+		}
+		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, container)
 	}
+
 	if job.Spec.Deploy.ImagePullSecrets != nil {
 		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
 	}
@@ -192,7 +195,7 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	disableFront, disableRsync, frontImage, rsyncImage := r.checkRsyncFront(&job)
+	disableFront, disableRsync, frontImage, rsyncImage := r.checkRsyncFront(job)
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -252,13 +255,17 @@ func (r *JobReconciler) desiredDeployment(job v1beta1.Job, manager string) (apps
 		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, rsyncContainer)
 	}
 
-	if err := ctrl.SetControllerReference(&job, &app, r.Scheme); err != nil {
-		return app, err
+	if len(app.Spec.Template.Spec.Containers) == 0 {
+		return nil, nil
 	}
-	return app, nil
+
+	if err := ctrl.SetControllerReference(job, &app, r.Scheme); err != nil {
+		return &app, err
+	}
+	return &app, nil
 }
 
-func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) {
+func (r *JobReconciler) desiredService(job *v1beta1.Job) (*corev1.Service, error) {
 	svc := corev1.Service{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -274,7 +281,7 @@ func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) 
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	disableFront, disableRsync, _, _ := r.checkRsyncFront(&job)
+	disableFront, disableRsync, _, _ := r.checkRsyncFront(job)
 	if !disableFront {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: FrontPort, Protocol: "TCP", TargetPort: intstr.FromString("front")})
 	}
@@ -282,13 +289,13 @@ func (r *JobReconciler) desiredService(job v1beta1.Job) (corev1.Service, error) 
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "rsync", Port: RsyncPort, Protocol: "TCP", TargetPort: intstr.FromString("rsync")})
 	}
 
-	if err := ctrl.SetControllerReference(&job, &svc, r.Scheme); err != nil {
-		return svc, err
+	if err := ctrl.SetControllerReference(job, &svc, r.Scheme); err != nil {
+		return &svc, err
 	}
-	return svc, nil
+	return &svc, nil
 }
 
-func (r *JobReconciler) desiredIngress(job v1beta1.Job) (v1.Ingress, error) {
+func (r *JobReconciler) desiredIngress(job *v1beta1.Job) (*v1.Ingress, error) {
 	annotations := make(map[string]string)
 	for k, v := range r.Config.FrontAnn {
 		annotations[k] = v
@@ -357,8 +364,8 @@ func (r *JobReconciler) desiredIngress(job v1beta1.Job) (v1.Ingress, error) {
 		ig.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path = job.Spec.Ingress.Path
 	}
 
-	if err := ctrl.SetControllerReference(&job, &ig, r.Scheme); err != nil {
-		return ig, err
+	if err := ctrl.SetControllerReference(job, &ig, r.Scheme); err != nil {
+		return &ig, err
 	}
-	return ig, nil
+	return &ig, nil
 }

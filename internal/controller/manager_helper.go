@@ -13,7 +13,7 @@ import (
 
 const ManagerPort = 3000
 
-func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.Deployment, error) {
+func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1.Deployment, error) {
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ManagerPort)},
@@ -85,13 +85,13 @@ func (r *ManagerReconciler) desiredDeployment(manager v1beta1.Manager) (appsv1.D
 		app.Spec.Template.Spec.Tolerations = manager.Spec.Deploy.Tolerations
 	}
 
-	if err := ctrl.SetControllerReference(&manager, &app, r.Scheme); err != nil {
-		return app, err
+	if err := ctrl.SetControllerReference(manager, &app, r.Scheme); err != nil {
+		return &app, err
 	}
-	return app, nil
+	return &app, nil
 }
 
-func (r *ManagerReconciler) desiredService(manager v1beta1.Manager) (corev1.Service, error) {
+func (r *ManagerReconciler) desiredService(manager *v1beta1.Manager) (*corev1.Service, error) {
 	svc := corev1.Service{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -108,8 +108,8 @@ func (r *ManagerReconciler) desiredService(manager v1beta1.Manager) (corev1.Serv
 		},
 	}
 
-	if err := ctrl.SetControllerReference(&manager, &svc, r.Scheme); err != nil {
-		return svc, err
+	if err := ctrl.SetControllerReference(manager, &svc, r.Scheme); err != nil {
+		return &svc, err
 	}
-	return svc, nil
+	return &svc, nil
 }

@@ -58,24 +58,24 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, errors.New("already have one active manager in this namespace")
 	}
 
-	app, err := r.desiredDeployment(manager)
+	app, err := r.desiredDeployment(&manager)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	svc, err := r.desiredService(manager)
+	svc, err := r.desiredService(&manager)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
 
-	err = r.Patch(ctx, &app, client.Apply, applyOpts...)
+	err = r.Patch(ctx, app, client.Apply, applyOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.Patch(ctx, &svc, client.Apply, applyOpts...)
+	err = r.Patch(ctx, svc, client.Apply, applyOpts...)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
