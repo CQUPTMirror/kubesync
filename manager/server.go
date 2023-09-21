@@ -92,13 +92,19 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		return nil, err
 	}
 
+	hc := &http.Client{
+		Transport: &http.Transport{MaxIdleConnsPerHost: 20},
+		Timeout:   5 * time.Second,
+	}
+
 	s := &Manager{
-		config:    config,
-		client:    cl,
-		internal:  context.Background(),
-		cache:     cc,
-		address:   options.Address,
-		namespace: namespace,
+		config:     config,
+		httpClient: hc,
+		client:     cl,
+		internal:   context.Background(),
+		cache:      cc,
+		address:    options.Address,
+		namespace:  namespace,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -389,13 +395,6 @@ func (m *Manager) getJobConfig(c *gin.Context) {
 func (m *Manager) getJobLatestLog(c *gin.Context) {
 	mirrorID := c.Param("id")
 	runLog.Info(fmt.Sprintf("Geting log from <%s>", mirrorID))
-
-	if m.httpClient == nil {
-		m.httpClient = &http.Client{
-			Transport: &http.Transport{MaxIdleConnsPerHost: 20},
-			Timeout:   5 * time.Second,
-		}
-	}
 	resp, err := m.httpClient.Get(fmt.Sprintf("http://%s:6000/log", mirrorID))
 
 	if err != nil {
@@ -621,18 +620,12 @@ func (m *Manager) disableJob(c *gin.Context) {
 }
 
 // PostJSON posts json object to url
-func PostJSON(mirrorID string, obj interface{}, client *http.Client) (*http.Response, error) {
-	if client == nil {
-		client = &http.Client{
-			Transport: &http.Transport{MaxIdleConnsPerHost: 20},
-			Timeout:   5 * time.Second,
-		}
-	}
+func (m *Manager) PostJSON(mirrorID string, obj interface{}) (*http.Response, error) {
 	b := new(bytes.Buffer)
 	if err := json.NewEncoder(b).Encode(obj); err != nil {
 		return nil, err
 	}
-	return client.Post(fmt.Sprintf("http://%s:6000", mirrorID), "application/json; charset=utf-8", b)
+	return m.httpClient.Post(fmt.Sprintf("http://%s:6000", mirrorID), "application/json; charset=utf-8", b)
 }
 
 func (m *Manager) handleClientCmd(c *gin.Context) {
@@ -654,7 +647,7 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 
 	runLog.Info(fmt.Sprintf("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID))
 	// post command to mirror
-	r, err := PostJSON(mirrorID, clientCmd, m.httpClient)
+	r, err := m.PostJSON(mirrorID, clientCmd)
 	if err != nil {
 		err := fmt.Errorf("post command to mirror %s fail: %s", mirrorID, err.Error())
 		c.Error(err)
