@@ -205,8 +205,6 @@ func (m *Manager) Run(ctx context.Context) error {
 
 func (m *Manager) GetJobRaw(c *gin.Context, mirrorID string) (*v1beta1.Job, error) {
 	job := new(v1beta1.Job)
-	m.rwmu.RLock()
-	defer m.rwmu.RUnlock()
 	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, job)
 	if err != nil {
 		err := fmt.Errorf("failed to get mirror: %s",
@@ -232,8 +230,6 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 	}
 	job.Status = w.JobStatus
 	job.Status.LastOnline = time.Now().Unix()
-	m.rwmu.Lock()
-	defer m.rwmu.Unlock()
 	err = m.client.Status().Update(c.Request.Context(), job)
 	return err
 }
@@ -326,9 +322,9 @@ func (m *Manager) listJob(c *gin.Context) {
 	var ws []internal.MirrorStatus
 
 	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
 	jobs := new(v1beta1.JobList)
 	err := m.client.List(c.Request.Context(), jobs)
-	m.rwmu.RUnlock()
 
 	for _, v := range jobs.Items {
 		w := internal.MirrorStatus{ID: v.Name, Alias: v.Spec.Config.Alias, JobStatus: v.Status}
@@ -350,6 +346,8 @@ func (m *Manager) getJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 	var status internal.MirrorStatus
 
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
 	status, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -367,6 +365,8 @@ func (m *Manager) getJobConfig(c *gin.Context) {
 	mirrorID := c.Param("id")
 	var config internal.MirrorConfig
 
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
 	job, err := m.GetJobRaw(c, mirrorID)
 	config = internal.MirrorConfig{ID: mirrorID, JobSpec: job.Spec}
 
@@ -403,13 +403,13 @@ func (m *Manager) getJobLatestLog(c *gin.Context) {
 func (m *Manager) deleteJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	job, err := m.GetJobRaw(c, mirrorID)
 
 	if err != nil {
 		return
 	}
-	m.rwmu.Lock()
-	defer m.rwmu.Unlock()
 	err = m.client.Delete(c.Request.Context(), job)
 	if err != nil {
 		err := fmt.Errorf("failed to delete mirror: %s",
@@ -426,6 +426,8 @@ func (m *Manager) deleteJob(c *gin.Context) {
 // registerMirror register a newly-online mirror
 func (m *Manager) registerMirror(c *gin.Context) {
 	mirrorID := c.Param("id")
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	status, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -464,6 +466,8 @@ func (m *Manager) updateSchedule(c *gin.Context) {
 	var schedule internal.MirrorSchedule
 	c.BindJSON(&schedule)
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	curStatus, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -495,6 +499,8 @@ func (m *Manager) updateJob(c *gin.Context) {
 	var status internal.MirrorStatus
 	c.BindJSON(&status)
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	curStatus, err := m.GetJob(c, mirrorID)
 
 	curTime := time.Now().Unix()
@@ -555,6 +561,8 @@ func (m *Manager) updateMirrorSize(c *gin.Context) {
 	var msg SizeMsg
 	c.BindJSON(&msg)
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	status, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -586,6 +594,8 @@ func (m *Manager) updateMirrorSize(c *gin.Context) {
 func (m *Manager) enableJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	curStat, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -611,6 +621,8 @@ func (m *Manager) enableJob(c *gin.Context) {
 func (m *Manager) disableJob(c *gin.Context) {
 	mirrorID := c.Param("id")
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	curStat, err := m.GetJob(c, mirrorID)
 
 	if err != nil {
@@ -647,6 +659,8 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 	var clientCmd internal.ClientCmd
 	c.BindJSON(&clientCmd)
 
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
 	curStat, err := m.GetJob(c, mirrorID)
 
 	changed := false
