@@ -237,60 +237,28 @@ func (m *Manager) UpdateJobStatus(c *gin.Context, w internal.MirrorStatus) error
 	return err
 }
 
-func handleMerge(c *gin.Context, old *v1beta1.JobSpec, new *v1beta1.JobSpec) (merged *v1beta1.JobSpec) {
-	oJobBytes, err := json.Marshal(old)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	var oJobSpec map[string]interface{}
-	if err = json.Unmarshal(oJobBytes, &oJobSpec); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	jobBytes, err := json.Marshal(new)
-	if err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	var jobSpec map[string]interface{}
-	if err = json.Unmarshal(jobBytes, &jobSpec); err != nil {
-		c.AbortWithError(http.StatusBadRequest, err)
-		return
-	}
-	if val, ok := jobSpec["config"]; ok {
-		switch vval := val.(type) {
-		case map[string]interface{}:
-			for k, v := range vval {
-				oJobSpec[k] = v
-			}
+func handleMerge(c *gin.Context, oJobSpec, jobSpec *map[string]map[string]interface{}) (merged *v1beta1.JobSpec) {
+	if val, ok := (*jobSpec)["config"]; ok {
+		for k, v := range val {
+			(*oJobSpec)["config"][k] = v
 		}
 	}
-	if val, ok := jobSpec["deploy"]; ok {
-		switch vval := val.(type) {
-		case map[string]interface{}:
-			for k, v := range vval {
-				oJobSpec[k] = v
-			}
+	if val, ok := (*jobSpec)["deploy"]; ok {
+		for k, v := range val {
+			(*oJobSpec)["deploy"][k] = v
 		}
 	}
-	if val, ok := jobSpec["volume"]; ok {
-		switch vval := val.(type) {
-		case map[string]interface{}:
-			for k, v := range vval {
-				oJobSpec[k] = v
-			}
+	if val, ok := (*jobSpec)["volume"]; ok {
+		for k, v := range val {
+			(*oJobSpec)["volume"][k] = v
 		}
 	}
-	if val, ok := jobSpec["ingress"]; ok {
-		switch vval := val.(type) {
-		case map[string]interface{}:
-			for k, v := range vval {
-				oJobSpec[k] = v
-			}
+	if val, ok := (*jobSpec)["ingress"]; ok {
+		for k, v := range val {
+			(*oJobSpec)["ingress"][k] = v
 		}
 	}
-	nJobBytes, err := json.Marshal(oJobSpec)
+	nJobBytes, err := json.Marshal(*oJobSpec)
 	if err != nil {
 		c.AbortWithError(http.StatusBadRequest, err)
 		return
@@ -305,8 +273,6 @@ func handleMerge(c *gin.Context, old *v1beta1.JobSpec, new *v1beta1.JobSpec) (me
 
 func (m *Manager) createJob(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var jobSpec v1beta1.JobSpec
-	c.BindJSON(&jobSpec)
 
 	var e error
 	ojb := new(v1beta1.Job)
@@ -322,10 +288,24 @@ func (m *Manager) createJob(c *gin.Context) {
 			Namespace: m.namespace,
 		},
 	}
-	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err == nil || ojb != nil {
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err != nil || ojb == nil {
+		var jobSpec v1beta1.JobSpec
+		c.BindJSON(&jobSpec)
 		job.Spec = jobSpec
 	} else {
-		job.Spec = *handleMerge(c, &ojb.Spec, &jobSpec)
+		oJobBytes, err := json.Marshal(ojb.Spec)
+		if err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		var oJobSpec map[string]map[string]interface{}
+		if err = json.Unmarshal(oJobBytes, &oJobSpec); err != nil {
+			c.AbortWithError(http.StatusBadRequest, err)
+			return
+		}
+		jobSpec := make(map[string]map[string]interface{})
+		c.BindJSON(&jobSpec)
+		job.Spec = *handleMerge(c, &oJobSpec, &jobSpec)
 	}
 	e = m.client.Patch(c.Request.Context(), &job, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 
