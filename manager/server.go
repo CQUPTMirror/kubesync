@@ -220,7 +220,7 @@ func (m *Manager) GetJobRaw(c *gin.Context, mirrorID string) (*v1beta1.Job, erro
 
 func (m *Manager) GetJob(c *gin.Context, mirrorID string) (w internal.MirrorStatus, err error) {
 	job, err := m.GetJobRaw(c, mirrorID)
-	w = internal.MirrorStatus{ID: mirrorID, JobStatus: job.Status}
+	w = internal.MirrorStatus{ID: mirrorID, Alias: job.Spec.Config.Alias, JobStatus: job.Status}
 	return
 }
 
@@ -275,6 +275,14 @@ func handleMerge(c *gin.Context, old *v1beta1.JobSpec, new *v1beta1.JobSpec) (me
 		}
 	}
 	if val, ok := jobSpec["volume"]; ok {
+		switch vval := val.(type) {
+		case map[string]interface{}:
+			for k, v := range vval {
+				oJobSpec[k] = v
+			}
+		}
+	}
+	if val, ok := jobSpec["ingress"]; ok {
 		switch vval := val.(type) {
 		case map[string]interface{}:
 			for k, v := range vval {
@@ -342,7 +350,7 @@ func (m *Manager) listJob(c *gin.Context) {
 	m.rwmu.RUnlock()
 
 	for _, v := range jobs.Items {
-		w := internal.MirrorStatus{ID: v.Name, JobStatus: v.Status}
+		w := internal.MirrorStatus{ID: v.Name, Alias: v.Spec.Config.Alias, JobStatus: v.Status}
 		ws = append(ws, w)
 	}
 

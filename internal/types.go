@@ -10,7 +10,8 @@ import (
 // A MirrorStatus represents a msg when
 // a worker has done syncing
 type MirrorStatus struct {
-	ID string `json:"id"`
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 
 	v1beta1.JobStatus
 }
