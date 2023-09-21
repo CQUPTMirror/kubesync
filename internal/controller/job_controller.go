@@ -140,6 +140,17 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 	}
 
+	if disableFront {
+		ig := new(v1.Ingress)
+		err := r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, ig)
+		if err == nil || ig != nil {
+			r.Delete(ctx, &v1.Ingress{
+				TypeMeta:   metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Ingress"},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
+		}
+	}
+
 	err = r.Status().Update(ctx, &job)
 	if err != nil {
 		return ctrl.Result{}, err
