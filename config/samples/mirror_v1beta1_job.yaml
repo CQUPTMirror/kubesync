@@ -14,6 +14,6 @@ spec:
     upstream: "rsync://tug.org/tlpretest/"
     provider: rsync
   deploy:
-    image: ghcr.io/CQUPTMirror/kubesync:worker
+    image: ghcr.io/CQUPTMirror/worker:dev
   volume:
     size: 1Mi

@@ -53,7 +53,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: controller
-        image: ghcr.io/CQUPTMirror/kubesync:controller
+        image: ghcr.io/CQUPTMirror/controller:dev
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
