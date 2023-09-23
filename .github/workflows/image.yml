@@ -1,0 +1,42 @@
+name: Build and Push Images
+
+on:
+  push:
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to Github Packages
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and Push controller image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.controller
+          push: true
+          tags: ghcr.io/cquptmirror/controller:dev
+      - name: Build and Push manager image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.manager
+          push: true
+          tags: ghcr.io/cquptmirror/manager:dev
+      - name: Build and Push worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/Dockerfile.worker
+          push: true
+          tags: ghcr.io/cquptmirror/worker:dev
