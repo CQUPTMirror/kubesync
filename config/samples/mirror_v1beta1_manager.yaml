@@ -9,4 +9,4 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: manager-sample
 spec:
-  image: ghcr.io/CQUPTMirror/manager:dev
+  image: ghcr.io/cquptmirror/manager:dev

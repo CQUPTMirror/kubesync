@@ -35,7 +35,7 @@ jobs:
           file: docker/Dockerfile.controller
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/CQUPTMirror/controller:dev
+          tags: ghcr.io/cquptmirror/controller:dev
       - name: Build and Push manager image
         uses: docker/build-push-action@v5
         with:
@@ -43,7 +43,7 @@ jobs:
           file: docker/Dockerfile.manager
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/CQUPTMirror/manager:dev
+          tags: ghcr.io/cquptmirror/manager:dev
       - name: Build and Push worker image
         uses: docker/build-push-action@v5
         with:
@@ -51,4 +51,4 @@ jobs:
           file: docker/Dockerfile.worker
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ghcr.io/CQUPTMirror/worker:dev
+          tags: ghcr.io/cquptmirror/worker:dev
