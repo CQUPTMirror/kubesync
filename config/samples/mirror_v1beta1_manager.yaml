@@ -9,4 +9,29 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: manager-sample
 spec:
-  image: ghcr.io/cquptmirror/manager:dev
+  image: ghcr.io/cquptmirror/manager:dev  # Required
+  imagePullPolicy: Always
+#  imagePullSecrets:
+#  nodeName:
+#  affinity:
+#  tolerations:
+#  cpuLimit:
+#  memLimit:
+---
+# For security reasons, the manager's ingress will not be created automatically
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: manager-sample
+spec:
+  rules:
+    - host: mirrors.cqupt.edu.cn
+      http:
+        paths:
+          - path: /static/tunasync.json
+            pathType: Exact
+            backend:
+              service:
+                name:  manager-sample
+                port:
+                  number: 3000

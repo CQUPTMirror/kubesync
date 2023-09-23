@@ -10,10 +10,45 @@ metadata:
   name: job-sample
 spec:
   config:
-    alias: tlpretest
-    upstream: "rsync://tug.org/tlpretest/"
-    provider: rsync
+    alias: tlpretest  # Alias of this mirror, optional
+    upstream: "rsync://tug.org/tlpretest/"  # The upstream url of this job, required
+    provider: rsync  # The sync provider of this job, required
+#    command:  # The sync command of this job, optional
+#    concurrent:  # The sync concurrent of this job, default 3, optional
+#    interval:  # The sync interval (minutes) of this job, default 1440, optional
+#    retry:  # The retry num of this job, default 2, optional
+#    timeout:  # The sync timeout (minutes) of this job, default 0, optional
+#    failOnMatch:  # The regexp to judge whether command job failed, optional
+#    IPv6Only:  # IPv6 only, optional
+#    IPv4Only:  # IPv4 only, optional
+#    excludeFile:  # Exclude files in rsync job, optional
+#    rsyncOptions:  # Extra rsync options, optional
+#    stage1Profile:  # Two stage rsync stage 1 profile, optional
+#    execOnSuccess:  # Success hook, optional
+#    execOnFailure:  # Failure hook, optional
+#    sizePattern:  # The regexp to get command job size form log, optional
+#    additionEnvs:  # The addition environments set to job container
+#    debug:  # Whether enable worker debug mode
   deploy:
-    image: ghcr.io/cquptmirror/worker:dev
+    image: ghcr.io/cquptmirror/worker:dev  # Required
+    imagePullPolicy: Always
+#    imagePullSecrets:
+#    nodeName:
+#    affinity:
+#    tolerations:
+#    cpuLimit:
+#    memLimit:
+#    disableFront:  # Disable directory service in this job
+#    frontImage:  # Image used to deploy the directory service
+#    disableRsync:  # Disable rsync service in this job
+#    rsyncImage:  # Image used to deploy the rsync service
   volume:
-    size: 1Mi
+    size: 1Mi  # The size of the job pvc, required
+#    storageClass:  # The storage class the job pve to use
+#    accessMode:  # Access mode of this pvc
+#  ingress:
+#    ingressClass:  # Ingress class used to deploy the directory service
+#    TLSSecret:  # TLS secret used to deploy the directory service
+#    host:  # Domain used to deploy the directory service
+#    path:  # Path used to deploy the directory service, default: /{name}
+#    annotations:  # Addition ingress annotations used to deploy the directory service, split by ';'
