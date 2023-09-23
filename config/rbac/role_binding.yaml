@@ -3,17 +3,17 @@ kind: ClusterRoleBinding
 metadata:
   labels:
     app.kubernetes.io/name: clusterrolebinding
-    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/instance: kubesync-rolebinding
     app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: kubesync
     app.kubernetes.io/part-of: kubesync
     app.kubernetes.io/managed-by: kustomize
-  name: manager-rolebinding
+  name: kubesync-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: manager-role
+  name: kubesync-role
 subjects:
 - kind: ServiceAccount
-  name: controller-manager
-  namespace: system
+  name: controller-sa
+  namespace: kubesync

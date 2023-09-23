@@ -9,4 +9,11 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: job-sample
 spec:
-  # TODO(user): Add fields here
+  config:
+    alias: tlpretest
+    upstream: "rsync://tug.org/tlpretest/"
+    provider: rsync
+  deploy:
+    image: ghcr.io/CQUPTMirror/kubesync:worker
+  volume:
+    size: 1Mi

@@ -9,4 +9,4 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: manager-sample
 spec:
-  # TODO(user): Add fields here
+  image: ghcr.io/CQUPTMirror/kubesync:manager

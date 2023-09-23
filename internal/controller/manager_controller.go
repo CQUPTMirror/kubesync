@@ -36,9 +36,14 @@ type ManagerReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-//+kubebuilder:rbac:groups=mirror.redrock.team,resources=managers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=mirror.redrock.team,resources=managers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=mirror.redrock.team,resources=managers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=mirror.redrock.team,resources=managers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mirror.redrock.team,resources=managers/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=mirror.redrock.team,resources=managers/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -58,6 +63,21 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, errors.New("already have one active manager in this namespace")
 	}
 
+	sa, err := r.desiredSA(&manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	role, err := r.desiredRole(&manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	rb, err := r.desiredRoleBinding(&manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	app, err := r.desiredDeployment(&manager)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -69,6 +89,21 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
+
+	err = r.Patch(ctx, sa, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.Patch(ctx, role, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.Patch(ctx, rb, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	err = r.Patch(ctx, app, client.Apply, applyOpts...)
 	if err != nil {

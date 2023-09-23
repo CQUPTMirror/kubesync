@@ -5,6 +5,7 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -12,6 +13,60 @@ import (
 )
 
 const ManagerPort = 3000
+
+func (r *ManagerReconciler) desiredSA(manager *v1beta1.Manager) (*corev1.ServiceAccount, error) {
+	sa := corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "ServiceAccount"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      manager.Name + "-sa",
+			Namespace: manager.Namespace,
+			Labels:    map[string]string{"manager": manager.Name},
+		},
+	}
+
+	if err := ctrl.SetControllerReference(manager, &sa, r.Scheme); err != nil {
+		return &sa, err
+	}
+	return &sa, nil
+}
+
+func (r *ManagerReconciler) desiredRole(manager *v1beta1.Manager) (*v1.Role, error) {
+	role := v1.Role{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Role"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      manager.Name + "-role",
+			Namespace: manager.Namespace,
+			Labels:    map[string]string{"manager": manager.Name},
+		},
+		Rules: []v1.PolicyRule{{
+			APIGroups: []string{v1beta1.GroupVersion.String()}, Resources: []string{"jobs"},
+			Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+		}},
+	}
+
+	if err := ctrl.SetControllerReference(manager, &role, r.Scheme); err != nil {
+		return &role, err
+	}
+	return &role, nil
+}
+
+func (r *ManagerReconciler) desiredRoleBinding(manager *v1beta1.Manager) (*v1.RoleBinding, error) {
+	roleBinding := v1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "RoleBinding"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      manager.Name,
+			Namespace: manager.Namespace,
+			Labels:    map[string]string{"manager": manager.Name},
+		},
+		Subjects: []v1.Subject{{Kind: v1.ServiceAccountKind, Name: manager.Name + "-sa"}},
+		RoleRef:  v1.RoleRef{APIGroup: v1.SchemeGroupVersion.Group, Kind: "Role", Name: manager.Name + "-role"},
+	}
+
+	if err := ctrl.SetControllerReference(manager, &roleBinding, r.Scheme); err != nil {
+		return &roleBinding, err
+	}
+	return &roleBinding, nil
+}
 
 func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1.Deployment, error) {
 	probe := &corev1.Probe{
@@ -55,7 +110,7 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 							},
 						},
 					},
-					ServiceAccountName: manager.Spec.Deploy.ServiceAccount,
+					ServiceAccountName: manager.Name + "-sa",
 				},
 			},
 		},

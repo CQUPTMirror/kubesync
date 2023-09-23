@@ -33,12 +33,6 @@ type DeployConfig struct {
 	MemoryLimit      string                        `json:"memLimit,omitempty"`
 }
 
-type ManagerDeploy struct {
-	DeployConfig `json:",inline"`
-
-	ServiceAccount string `json:"serviceAccount,omitempty"`
-}
-
 type DeployPhase string
 
 const (
@@ -49,7 +43,7 @@ const (
 
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy ManagerDeploy `json:"deploy"`
+	Deploy DeployConfig `json:",inline"`
 }
 
 // ManagerStatus defines the observed state of Manager
