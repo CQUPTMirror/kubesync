@@ -139,7 +139,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 
 	// list jobs, status page
 	s.engine.GET("/jobs", s.listJob)
-	s.engine.GET("/static/tunasync.json", s.listJob)
+	s.engine.GET("/mirrors", s.listJob)
 
 	// mirrorID should be valid in this route group
 	mirrorValidateGroup := s.engine.Group("/job/:id")

@@ -219,7 +219,7 @@ func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingre
 						HTTP: &v12.HTTPIngressRuleValue{
 							Paths: []v12.HTTPIngressPath{
 								{
-									Path:     "/static/tunasync.json",
+									Path:     "/mirrors",
 									PathType: &pathType,
 									Backend: v12.IngressBackend{
 										Service: &v12.IngressServiceBackend{
