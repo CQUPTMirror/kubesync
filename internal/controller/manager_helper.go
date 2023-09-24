@@ -199,7 +199,7 @@ func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingre
 	pathType := v12.PathTypeExact
 
 	ig := v12.Ingress{
-		TypeMeta: metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Ingress"},
+		TypeMeta: metav1.TypeMeta{APIVersion: v12.SchemeGroupVersion.String(), Kind: "Ingress"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        manager.Name,
 			Namespace:   manager.Namespace,
