@@ -240,7 +240,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
-					MountPath: "/data",
+					MountPath: "/data/" + job.Name,
 				},
 			},
 			Ports: []corev1.ContainerPort{
@@ -272,7 +272,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
-					MountPath: "/data",
+					MountPath: "/data/" + job.Name,
 				},
 			},
 			Ports: []corev1.ContainerPort{
