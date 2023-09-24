@@ -105,6 +105,8 @@ func main() {
 	config := controller.Config{
 		FrontImage: os.Getenv("FRONT_IMAGE"),
 		RsyncImage: os.Getenv("RSYNC_IMAGE"),
+		FrontCmd:   os.Getenv("FRONT_CMD"),
+		RsyncCmd:   os.Getenv("RSYNC_CMD"),
 		FrontHost:  os.Getenv("FRONT_HOST"),
 		FrontTLS:   os.Getenv("FRONT_TLS"),
 		FrontClass: os.Getenv("FRONT_CLASS"),

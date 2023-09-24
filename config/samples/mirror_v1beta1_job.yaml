@@ -40,8 +40,10 @@ spec:
 #    memLimit:
 #    disableFront:  # Disable directory service in this job
 #    frontImage:  # Image used to deploy the directory service
+#    frontCmd:  # Command used to deploy the directory service
 #    disableRsync:  # Disable rsync service in this job
 #    rsyncImage:  # Image used to deploy the rsync service
+#    rsyncCmd:  # Command used to deploy the rsync service
   volume:
     size: 1Mi  # The size of the job pvc, required
 #    storageClass:  # The storage class the job pve to use

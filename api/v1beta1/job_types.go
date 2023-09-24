@@ -49,8 +49,10 @@ type JobDeploy struct {
 
 	DisableFront string `json:"disableFront,omitempty"`
 	FrontImage   string `json:"frontImage,omitempty"`
+	FrontCmd     string `json:"frontCmd,omitempty"`
 	DisableRsync string `json:"disableRsync,omitempty"`
 	RsyncImage   string `json:"rsyncImage,omitempty"`
+	RsyncCmd     string `json:"rsyncCmd,omitempty"`
 }
 
 type PVConfig struct {

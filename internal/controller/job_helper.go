@@ -38,8 +38,9 @@ const (
 	RsyncPort = 873
 )
 
-func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontImage, rsyncImage string) {
+func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontCmd, rsyncCmd []string, frontImage, rsyncImage string) {
 	frontImage, rsyncImage = r.Config.FrontImage, r.Config.RsyncImage
+	frontCmd, rsyncCmd = strings.Split(r.Config.FrontCmd, " "), strings.Split(r.Config.RsyncCmd, " ")
 	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
 		disableFront = s
 	}
@@ -49,6 +50,9 @@ func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disable
 	if frontImage == "" {
 		disableFront = true
 	}
+	if job.Spec.Deploy.FrontCmd != "" {
+		frontCmd = strings.Split(job.Spec.Deploy.FrontCmd, " ")
+	}
 	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableRsync); err == nil {
 		disableRsync = s
 	}
@@ -57,6 +61,9 @@ func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disable
 	}
 	if rsyncImage == "" {
 		disableRsync = true
+	}
+	if job.Spec.Deploy.RsyncCmd != "" {
+		rsyncCmd = strings.Split(job.Spec.Deploy.RsyncCmd, " ")
 	}
 	return
 }
@@ -212,7 +219,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	if job.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
 	}
-	disableFront, disableRsync, frontImage, rsyncImage := r.checkRsyncFront(job)
+	disableFront, disableRsync, frontCmd, rsyncCmd, frontImage, rsyncImage := r.checkRsyncFront(job)
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -239,6 +246,9 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			Ports: []corev1.ContainerPort{
 				{ContainerPort: FrontPort, Name: "front", Protocol: "TCP"},
 			},
+		}
+		if len(frontCmd) > 0 {
+			frontContainer.Command = frontCmd
 		}
 		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, frontContainer)
 	}
@@ -269,6 +279,9 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 				{ContainerPort: RsyncPort, Name: "rsync", Protocol: "TCP"},
 			},
 		}
+		if len(rsyncCmd) > 0 {
+			rsyncContainer.Command = rsyncCmd
+		}
 		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, rsyncContainer)
 	}
 
@@ -298,7 +311,7 @@ func (r *JobReconciler) desiredService(job *v1beta1.Job) (*corev1.Service, error
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	disableFront, disableRsync, _, _ := r.checkRsyncFront(job)
+	disableFront, disableRsync, _, _, _, _ := r.checkRsyncFront(job)
 	if !disableFront {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: FrontPort, Protocol: "TCP", TargetPort: intstr.FromString("front")})
 	}

@@ -959,6 +959,8 @@ spec:
                     additionalProperties:
                       type: string
                     type: object
+                  frontCmd:
+                    type: string
                   frontImage:
                     type: string
                   image:
@@ -982,6 +984,8 @@ spec:
                   memLimit:
                     type: string
                   nodeName:
+                    type: string
+                  rsyncCmd:
                     type: string
                   rsyncImage:
                     type: string
