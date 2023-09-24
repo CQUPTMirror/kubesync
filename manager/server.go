@@ -91,9 +91,10 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	}
 
 	cc, err := cache.New(config, cache.Options{
-		Scheme: options.Scheme,
-		Mapper: mapper,
-		Resync: &defaultRetryPeriod,
+		Scheme:    options.Scheme,
+		Mapper:    mapper,
+		Resync:    &defaultRetryPeriod,
+		Namespace: namespace,
 	})
 	if err != nil {
 		return nil, err
@@ -537,6 +538,7 @@ func (m *Manager) updateJob(c *gin.Context) {
 		runLog.Info(fmt.Sprintf("Job [%s] %s", status.ID, status.Status))
 	}
 
+	curJob.Status = status.JobStatus
 	err = m.client.Status().Update(c.Request.Context(), curJob)
 	if err != nil {
 		err := fmt.Errorf("failed to update job %s: %s",

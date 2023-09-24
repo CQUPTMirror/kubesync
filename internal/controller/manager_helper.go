@@ -56,10 +56,16 @@ func (r *ManagerReconciler) desiredRole(manager *v1beta1.Manager) (*v1.Role, err
 			Namespace: manager.Namespace,
 			Labels:    map[string]string{"manager": manager.Name},
 		},
-		Rules: []v1.PolicyRule{{
-			APIGroups: []string{v1beta1.GroupVersion.String()}, Resources: []string{"jobs"},
-			Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
-		}},
+		Rules: []v1.PolicyRule{
+			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"jobs"},
+				Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"jobs/status"},
+				Verbs: []string{"get", "patch", "update"},
+			},
+		},
 	}
 
 	if err := ctrl.SetControllerReference(manager, &role, r.Scheme); err != nil {
