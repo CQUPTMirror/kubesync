@@ -134,8 +134,10 @@ rules:
   resources:
   - roles
   verbs:
+  - bind
   - create
   - delete
+  - escalate
   - get
   - list
   - patch

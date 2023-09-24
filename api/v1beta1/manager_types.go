@@ -51,7 +51,7 @@ type IngressConfig struct {
 
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy  DeployConfig  `json:",inline"`
+	Deploy  DeployConfig  `json:"deploy"`
 	Ingress IngressConfig `json:"ingress,omitempty"`
 }
 

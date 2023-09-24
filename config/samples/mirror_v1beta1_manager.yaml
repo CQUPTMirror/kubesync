@@ -9,14 +9,15 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: manager-sample
 spec:
-  image: ghcr.io/cquptmirror/manager:dev  # Required
-  imagePullPolicy: Always
-#  imagePullSecrets:
-#  nodeName:
-#  affinity:
-#  tolerations:
-#  cpuLimit:
-#  memLimit:
+  deploy:
+    image: ghcr.io/cquptmirror/manager:dev  # Required
+    imagePullPolicy: Always
+#    imagePullSecrets:
+#    nodeName:
+#    affinity:
+#    tolerations:
+#    cpuLimit:
+#    memLimit:
 #  ingress:
 #    ingressClass:  # Ingress class used to deploy the api service
 #    TLSSecret:  # TLS secret used to deploy the api service
