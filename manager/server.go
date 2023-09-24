@@ -658,19 +658,23 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 	var clientCmd internal.ClientCmd
 	c.BindJSON(&clientCmd)
 
-	m.rwmu.Lock()
-	defer m.rwmu.Unlock()
-	curJob, err := m.GetJob(c, mirrorID)
-
-	changed := false
 	switch clientCmd.Cmd {
 	case internal.CmdStop:
+		m.rwmu.Lock()
+		defer m.rwmu.Unlock()
+		curJob, err := m.GetJob(c, mirrorID)
+		if err != nil {
+			runLog.Error(err, fmt.Sprintf("failed to get job %s: %s", mirrorID, err.Error()))
+			return
+		}
+
 		curJob.Status.Status = v1beta1.Paused
-		changed = true
-	}
-	if changed {
 		curJob.Status.LastOnline = time.Now().Unix()
 		err = m.client.Status().Update(c.Request.Context(), curJob)
+		if err != nil {
+			runLog.Error(err, fmt.Sprintf("failed to update job %s: %s", mirrorID, err.Error()))
+			return
+		}
 	}
 
 	runLog.Info(fmt.Sprintf("Posting command '%s' to <%s>", clientCmd.Cmd, mirrorID))
