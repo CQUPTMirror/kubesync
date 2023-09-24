@@ -42,9 +42,17 @@ const (
 	DeployFailed    DeployPhase = "Failed"
 )
 
+type IngressConfig struct {
+	IngressClass string            `json:"ingressClass,omitempty"`
+	TLSSecret    string            `json:"TLSSecret,omitempty"`
+	Host         string            `json:"host,omitempty"`
+	Annotations  map[string]string `json:"annotations,omitempty"`
+}
+
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy DeployConfig `json:",inline"`
+	Deploy  DeployConfig  `json:",inline"`
+	Ingress IngressConfig `json:"ingress,omitempty"`
 }
 
 // ManagerStatus defines the observed state of Manager

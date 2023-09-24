@@ -50,5 +50,4 @@ spec:
 #    ingressClass:  # Ingress class used to deploy the directory service
 #    TLSSecret:  # TLS secret used to deploy the directory service
 #    host:  # Domain used to deploy the directory service
-#    path:  # Path used to deploy the directory service, default: /{name}
 #    annotations:  # Addition ingress annotations used to deploy the directory service, split by ';'

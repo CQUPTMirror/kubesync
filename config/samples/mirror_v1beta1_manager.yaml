@@ -17,21 +17,8 @@ spec:
 #  tolerations:
 #  cpuLimit:
 #  memLimit:
----
-# For security reasons, the manager's ingress will not be created automatically
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: manager-sample
-spec:
-  rules:
-    - host: mirrors.cqupt.edu.cn
-      http:
-        paths:
-          - path: /static/tunasync.json
-            pathType: Exact
-            backend:
-              service:
-                name:  manager-sample
-                port:
-                  number: 3000
+#  ingress:
+#    ingressClass:  # Ingress class used to deploy the api service
+#    TLSSecret:  # TLS secret used to deploy the api service
+#    host:  # Domain used to deploy the api service
+#    annotations:  # Addition ingress annotations used to deploy the api service, split by ';'

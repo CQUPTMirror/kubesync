@@ -22,7 +22,8 @@ import (
 	"errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-
+	v12 "k8s.io/api/networking/v1"
+	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,6 +36,7 @@ import (
 type ManagerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Config *Config
 }
 
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=managers,verbs=get;list;watch;create;update;patch;delete
@@ -45,6 +47,7 @@ type ManagerReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -89,6 +92,11 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	ig, err := r.desiredIngress(&manager)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
 
 	err = r.Patch(ctx, sa, client.Apply, applyOpts...)
@@ -116,6 +124,11 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	err = r.Patch(ctx, ig, client.Apply, applyOpts...)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	manager.Status.Phase = mirrorv1beta1.DeploySucceeded
 
 	err = r.Status().Update(ctx, &manager)
@@ -137,7 +150,11 @@ func (r *ManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&mirrorv1beta1.Manager{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&v1.Role{}).
+		Owns(&v1.RoleBinding{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
+		Owns(&v12.Ingress{}).
 		Complete(r)
 }

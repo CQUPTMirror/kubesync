@@ -1040,8 +1040,6 @@ spec:
                     type: string
                   ingressClass:
                     type: string
-                  path:
-                    type: string
                 type: object
               volume:
                 properties:

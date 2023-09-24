@@ -102,17 +102,19 @@ func main() {
 		}
 	}
 
+	config := controller.Config{
+		FrontImage: os.Getenv("FRONT_IMAGE"),
+		RsyncImage: os.Getenv("RSYNC_IMAGE"),
+		FrontHost:  os.Getenv("FRONT_HOST"),
+		FrontTLS:   os.Getenv("FRONT_TLS"),
+		FrontClass: os.Getenv("FRONT_CLASS"),
+		FrontAnn:   annItems,
+	}
+
 	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: &controller.Config{
-			FrontImage: os.Getenv("FRONT_IMAGE"),
-			RsyncImage: os.Getenv("RSYNC_IMAGE"),
-			FrontHost:  os.Getenv("FRONT_HOST"),
-			FrontTLS:   os.Getenv("FRONT_TLS"),
-			FrontClass: os.Getenv("FRONT_CLASS"),
-			FrontAnn:   annItems,
-		},
+		Config: &config,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Job")
 		os.Exit(1)
@@ -120,6 +122,7 @@ func main() {
 	if err = (&controller.ManagerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Config: &config,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Manager")
 		os.Exit(1)

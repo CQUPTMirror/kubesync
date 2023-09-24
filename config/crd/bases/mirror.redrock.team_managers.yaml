@@ -887,6 +887,19 @@ spec:
                   type: object
                   x-kubernetes-map-type: atomic
                 type: array
+              ingress:
+                properties:
+                  TLSSecret:
+                    type: string
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  host:
+                    type: string
+                  ingressClass:
+                    type: string
+                type: object
               memLimit:
                 type: string
               nodeName:

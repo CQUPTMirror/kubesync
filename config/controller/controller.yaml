@@ -60,13 +60,13 @@ spec:
 #          value: nginx / caddy
 #        - name: RSYNC_IMAGE  # Default image used to deploy the rsync service
 #          value: rsync
-#        - name: FRONT_HOST  # Default domain used to deploy the directory service
+#        - name: FRONT_HOST  # Default domain used to deploy front services (api, directory)
 #          value: mirrors.cqupt.edu.cn
-#        - name: FRONT_TLS  # Default TLS secret used to deploy the directory service
+#        - name: FRONT_TLS  # Default TLS secret used to deploy front services (api, directory)
 #          value: mirrors-tls
-#        - name: FRONT_CLASS  # Default ingress class used to deploy the directory service
+#        - name: FRONT_CLASS  # Default ingress class used to deploy front services (api, directory)
 #          value: traefik
-#        - name: FRONT_ANN  # Default ingress annotations used to deploy the directory service, split by ';'
+#        - name: FRONT_ANN  # Default ingress annotations used to deploy front services (api, directory), split by ';'
 #          value: "traefik.ingress.kubernetes.io/router.entrypoints: http,https;traefik.ingress.kubernetes.io/router.middlewares: auth@file,default-prefix@kubernetescrd"
         securityContext:
           allowPrivilegeEscalation: false

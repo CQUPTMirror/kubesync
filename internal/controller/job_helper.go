@@ -377,10 +377,6 @@ func (r *JobReconciler) desiredIngress(job *v1beta1.Job) (*v1.Ingress, error) {
 		}
 	}
 
-	if job.Spec.Ingress.Path != "" {
-		ig.Spec.Rules[0].IngressRuleValue.HTTP.Paths[0].Path = job.Spec.Ingress.Path
-	}
-
 	if err := ctrl.SetControllerReference(job, &ig, r.Scheme); err != nil {
 		return &ig, err
 	}

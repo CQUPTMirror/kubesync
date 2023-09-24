@@ -59,14 +59,6 @@ type PVConfig struct {
 	AccessMode   corev1.PersistentVolumeAccessMode `json:"accessMode,omitempty"`
 }
 
-type IngressConfig struct {
-	IngressClass string            `json:"ingressClass,omitempty"`
-	TLSSecret    string            `json:"TLSSecret,omitempty"`
-	Host         string            `json:"host,omitempty"`
-	Path         string            `json:"path,omitempty"`
-	Annotations  map[string]string `json:"annotations,omitempty"`
-}
-
 // JobSpec defines the desired state of Job
 type JobSpec struct {
 	Config  JobConfig     `json:"config"`

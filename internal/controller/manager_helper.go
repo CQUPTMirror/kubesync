@@ -22,6 +22,7 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	v12 "k8s.io/api/networking/v1"
 	v1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,4 +185,75 @@ func (r *ManagerReconciler) desiredService(manager *v1beta1.Manager) (*corev1.Se
 		return &svc, err
 	}
 	return &svc, nil
+}
+
+func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingress, error) {
+	annotations := make(map[string]string)
+	for k, v := range r.Config.FrontAnn {
+		annotations[k] = v
+	}
+	for k, v := range manager.Spec.Ingress.Annotations {
+		annotations[k] = v
+	}
+
+	pathType := v12.PathTypeExact
+
+	ig := v12.Ingress{
+		TypeMeta: metav1.TypeMeta{APIVersion: v1.SchemeGroupVersion.String(), Kind: "Ingress"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        manager.Name,
+			Namespace:   manager.Namespace,
+			Labels:      map[string]string{"manager": manager.Name},
+			Annotations: annotations,
+		},
+		Spec: v12.IngressSpec{
+			Rules: []v12.IngressRule{
+				{
+					IngressRuleValue: v12.IngressRuleValue{
+						HTTP: &v12.HTTPIngressRuleValue{
+							Paths: []v12.HTTPIngressPath{
+								{
+									Path:     "/static/tunasync.json",
+									PathType: &pathType,
+									Backend: v12.IngressBackend{
+										Service: &v12.IngressServiceBackend{
+											Name: manager.Name,
+											Port: v12.ServiceBackendPort{Name: "api"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	if r.Config.FrontClass != "" || manager.Spec.Ingress.IngressClass != "" {
+		ig.Spec.IngressClassName = &r.Config.FrontClass
+		if manager.Spec.Ingress.IngressClass != "" {
+			ig.Spec.IngressClassName = &manager.Spec.Ingress.IngressClass
+		}
+	}
+
+	if r.Config.FrontTLS != "" || manager.Spec.Ingress.TLSSecret != "" {
+		secretName := r.Config.FrontTLS
+		if manager.Spec.Ingress.TLSSecret != "" {
+			secretName = manager.Spec.Ingress.TLSSecret
+		}
+		ig.Spec.TLS = []v12.IngressTLS{{SecretName: secretName}}
+	}
+
+	if r.Config.FrontHost != "" || manager.Spec.Ingress.Host != "" {
+		ig.Spec.Rules[0].Host = r.Config.FrontHost
+		if manager.Spec.Ingress.Host != "" {
+			ig.Spec.Rules[0].Host = manager.Spec.Ingress.Host
+		}
+	}
+
+	if err := ctrl.SetControllerReference(manager, &ig, r.Scheme); err != nil {
+		return &ig, err
+	}
+	return &ig, nil
 }
