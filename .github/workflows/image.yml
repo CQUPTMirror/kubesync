@@ -4,9 +4,11 @@ on:
   push:
     paths-ignore:
       - 'README.md'
+      - 'config/**'
   pull_request:
     paths-ignore:
       - 'README.md'
+      - 'config/**'
 
 jobs:
   build:
