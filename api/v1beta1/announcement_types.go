@@ -30,8 +30,8 @@ type AnnouncementSpec struct {
 
 // AnnouncementStatus defines the observed state of Announcement
 type AnnouncementStatus struct {
-	PublishTime int64 `json:"pubTime"`
-	EditTime    int64 `json:"editTime"`
+	PubTime  int64 `json:"pubTime"`
+	EditTime int64 `json:"editTime"`
 }
 
 //+kubebuilder:object:root=true

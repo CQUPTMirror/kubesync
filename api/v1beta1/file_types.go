@@ -41,8 +41,8 @@ type FileSpec struct {
 
 // FileStatus defines the observed state of File
 type FileStatus struct {
-	Files      []Url `json:"files,omitempty"`
-	UpdateTime int64 `json:"updateTime,omitempty"`
+	Files      []Url `json:"files"`
+	UpdateTime int64 `json:"updateTime"`
 }
 
 //+kubebuilder:object:root=true

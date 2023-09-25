@@ -770,7 +770,7 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		var newsSpec v1beta1.AnnouncementSpec
 		c.BindJSON(&newsSpec)
 		news.Spec = newsSpec
-		news.Status.PublishTime = time.Now().Unix()
+		news.Status.PubTime = time.Now().Unix()
 		news.Status.EditTime = time.Now().Unix()
 	} else {
 		newsSpec := make(map[string]string)
@@ -787,16 +787,6 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		news.Spec = oNews.Spec
 		news.Status.EditTime = time.Now().Unix()
 	}
-	e = m.client.Patch(c.Request.Context(), &news, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
-
-	if e != nil {
-		err := fmt.Errorf("failed to patch announcement %s: %s",
-			announcementID, e.Error(),
-		)
-		c.Error(err)
-		m.returnErrJSON(c, http.StatusInternalServerError, err)
-		return
-	}
 
 	e = m.client.Status().Update(c.Request.Context(), &news)
 	if e != nil {
@@ -807,6 +797,17 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
+
+	e = m.client.Patch(c.Request.Context(), &news, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
+	if e != nil {
+		err := fmt.Errorf("failed to patch announcement %s: %s",
+			announcementID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + announcementID + " succeed"})
 }
 
@@ -820,7 +821,13 @@ func (m *Manager) listAnnouncement(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), announcements)
 
 	for _, v := range announcements.Items {
-		ws = append(ws, internal.AnnouncementInfo{ID: v.Name, AnnouncementSpec: v.Spec, AnnouncementStatus: v.Status})
+		ws = append(ws, internal.AnnouncementInfo{
+			ID:                 v.Name,
+			Title:              v.Spec.Title,
+			Author:             v.Spec.Author,
+			Content:            v.Spec.Content,
+			AnnouncementStatus: v.Status,
+		})
 	}
 
 	if err != nil {
@@ -849,7 +856,13 @@ func (m *Manager) getAnnouncement(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, announcement.Spec)
+	c.JSON(http.StatusOK, internal.AnnouncementInfo{
+		ID:                 announcementID,
+		Title:              announcement.Spec.Title,
+		Author:             announcement.Spec.Author,
+		Content:            announcement.Spec.Content,
+		AnnouncementStatus: announcement.Status,
+	})
 }
 
 // deleteAnnouncement deletes one announcement by id
@@ -929,8 +942,18 @@ func (m *Manager) updateFile(c *gin.Context) {
 			file.Status.UpdateTime = time.Now().Unix()
 		}
 	}
-	e := m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 
+	e := m.client.Status().Update(c.Request.Context(), &file)
+	if e != nil {
+		err := fmt.Errorf("failed to update file %s status: %s",
+			fileID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	e = m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 	if e != nil {
 		err := fmt.Errorf("failed to patch file %s: %s",
 			fileID, e.Error(),
@@ -940,15 +963,6 @@ func (m *Manager) updateFile(c *gin.Context) {
 		return
 	}
 
-	e = m.client.Status().Update(c.Request.Context(), &file)
-	if e != nil {
-		err := fmt.Errorf("failed to update file %s status: %s",
-			fileID, e.Error(),
-		)
-		c.Error(err)
-		m.returnErrJSON(c, http.StatusInternalServerError, err)
-		return
-	}
 	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + fileID + " succeed"})
 }
 
@@ -962,7 +976,12 @@ func (m *Manager) listFile(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), files)
 
 	for _, v := range files.Items {
-		ws = append(ws, internal.FileInfo{ID: v.Name, FileBase: internal.FileBase{FileSpec: v.Spec, FileStatus: v.Status}})
+		if len(v.Status.Files) > 0 {
+			ws = append(ws, internal.FileInfo{
+				ID:       v.Name,
+				FileBase: internal.FileBase{Type: v.Spec.Type, Alias: v.Spec.Alias, FileStatus: v.Status},
+			})
+		}
 	}
 
 	if err != nil {
@@ -991,7 +1010,10 @@ func (m *Manager) getFile(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, file.Status)
+	c.JSON(http.StatusOK, internal.FileInfo{
+		ID:       file.Name,
+		FileBase: internal.FileBase{Type: file.Spec.Type, Alias: file.Spec.Alias, FileStatus: file.Status},
+	})
 }
 
 // deleteFile deletes one file by id

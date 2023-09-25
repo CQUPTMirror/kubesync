@@ -8,14 +8,18 @@ import (
 )
 
 type AnnouncementInfo struct {
-	ID string `json:"id"`
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Author  string `json:"author"`
+	Content string `json:"content"`
 
-	v1beta1.AnnouncementSpec
 	v1beta1.AnnouncementStatus
 }
 
 type FileBase struct {
-	v1beta1.FileSpec
+	Type  v1beta1.FileType `json:"type"`
+	Alias string           `json:"alias"`
+
 	v1beta1.FileStatus
 }
 

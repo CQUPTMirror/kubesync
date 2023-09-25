@@ -58,6 +58,9 @@ spec:
               updateTime:
                 format: int64
                 type: integer
+            required:
+            - files
+            - updateTime
             type: object
         type: object
     served: true
