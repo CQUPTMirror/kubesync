@@ -7,11 +7,12 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
-// A MirrorStatus represents a msg when
-// a worker has done syncing
 type MirrorStatus struct {
-	ID    string `json:"id"`
-	Alias string `json:"alias"`
+	ID    string             `json:"id"`
+	Alias string             `json:"alias"`
+	Desc  string             `json:"desc"`
+	Url   string             `json:"url"`
+	Type  v1beta1.MirrorType `json:"type"`
 
 	v1beta1.JobStatus
 }

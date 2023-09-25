@@ -26,4 +26,20 @@ resources:
   kind: Manager
   path: github.com/CQUPTMirror/kubesync/api/v1beta1
   version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: redrock.team
+  group: mirror
+  kind: Announcement
+  path: github.com/CQUPTMirror/kubesync/api/v1beta1
+  version: v1beta1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: redrock.team
+  group: mirror
+  kind: File
+  path: github.com/CQUPTMirror/kubesync/api/v1beta1
+  version: v1beta1
 version: "3"

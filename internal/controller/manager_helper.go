@@ -65,6 +65,18 @@ func (r *ManagerReconciler) desiredRole(manager *v1beta1.Manager) (*v1.Role, err
 				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"jobs/status"},
 				Verbs: []string{"get", "patch", "update"},
 			},
+			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"announcements"},
+				Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"files"},
+				Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
+			},
+			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"files/status"},
+				Verbs: []string{"get", "patch", "update"},
+			},
 		},
 	}
 
@@ -203,6 +215,12 @@ func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingre
 	}
 
 	pathType := v12.PathTypeExact
+	svc := v12.IngressBackend{
+		Service: &v12.IngressServiceBackend{
+			Name: manager.Name,
+			Port: v12.ServiceBackendPort{Name: "api"},
+		},
+	}
 
 	ig := v12.Ingress{
 		TypeMeta: metav1.TypeMeta{APIVersion: v12.SchemeGroupVersion.String(), Kind: "Ingress"},
@@ -218,16 +236,9 @@ func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingre
 					IngressRuleValue: v12.IngressRuleValue{
 						HTTP: &v12.HTTPIngressRuleValue{
 							Paths: []v12.HTTPIngressPath{
-								{
-									Path:     "/mirrors",
-									PathType: &pathType,
-									Backend: v12.IngressBackend{
-										Service: &v12.IngressServiceBackend{
-											Name: manager.Name,
-											Port: v12.ServiceBackendPort{Name: "api"},
-										},
-									},
-								},
+								{Path: "/api/mirrors", PathType: &pathType, Backend: svc},
+								{Path: "/api/news", PathType: &pathType, Backend: svc},
+								{Path: "/api/files", PathType: &pathType, Backend: svc},
 							},
 						},
 					},

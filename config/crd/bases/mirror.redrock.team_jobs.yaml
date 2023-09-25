@@ -51,6 +51,8 @@ spec:
                     type: integer
                   debug:
                     type: string
+                  desc:
+                    type: string
                   excludeFile:
                     type: string
                   execOnFailure:
@@ -73,7 +75,11 @@ spec:
                     type: string
                   timeout:
                     type: integer
+                  type:
+                    type: string
                   upstream:
+                    type: string
+                  url:
                     type: string
                 required:
                 - provider

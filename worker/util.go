@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -63,16 +63,27 @@ func CreateHTTPClient() (*http.Client, error) {
 	}, nil
 }
 
-// PostJSON posts json object to url
-func PostJSON(url string, obj interface{}, client *http.Client) (*http.Response, error) {
+// HandleRequest post/head url
+func HandleRequest(method, url string, obj interface{}, client *http.Client) (*http.Response, error) {
 	if client == nil {
 		client, _ = CreateHTTPClient()
 	}
-	b := new(bytes.Buffer)
-	if err := json.NewEncoder(b).Encode(obj); err != nil {
+
+	var b *bytes.Buffer = nil
+
+	if obj != nil {
+		b = new(bytes.Buffer)
+		if err := json.NewEncoder(b).Encode(obj); err != nil {
+			return nil, err
+		}
+	}
+
+	req, err := http.NewRequest(method, url, b)
+	if err != nil {
 		return nil, err
 	}
-	return client.Post(url, "application/json; charset=utf-8", b)
+	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	return client.Do(req)
 }
 
 // GetJSON gets a json response from url
@@ -89,7 +100,7 @@ func GetJSON(url string, obj interface{}, client *http.Client) (*http.Response, 
 		return resp, errors.New("HTTP status code is not 200")
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return resp, err
 	}
@@ -102,7 +113,7 @@ func FindAllSubmatchInFile(fileName string, re *regexp.Regexp) (matches [][][]by
 		err = errors.New("Invalid log file")
 		return
 	}
-	if content, err := ioutil.ReadFile(fileName); err == nil {
+	if content, err := os.ReadFile(fileName); err == nil {
 		matches = re.FindAllSubmatch(content, -1)
 		// fmt.Printf("FindAllSubmatchInFile: %q\n", matches)
 	}

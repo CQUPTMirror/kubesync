@@ -1,0 +1,17 @@
+apiVersion: mirror.redrock.team/v1beta1
+kind: File
+metadata:
+  labels:
+    app.kubernetes.io/name: file
+    app.kubernetes.io/instance: file-sample
+    app.kubernetes.io/part-of: kubesync
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubesync
+  name: file-sample
+spec:
+status:
+  category: app
+  distro: file  # optional
+  urls:
+    - name: testfile
+      url: /100mb.test

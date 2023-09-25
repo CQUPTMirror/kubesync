@@ -139,7 +139,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 
 	// list jobs, status page
 	s.engine.GET("/jobs", s.listJob)
-	s.engine.GET("/mirrors", s.listJob)
+	s.engine.GET("/api/mirrors", s.listJob)
 
 	// mirrorID should be valid in this route group
 	mirrorValidateGroup := s.engine.Group("/job/:id")
@@ -151,17 +151,47 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		mirrorValidateGroup.GET("config", s.getJobConfig)
 		mirrorValidateGroup.GET("log", s.getJobLatestLog)
 		// create or patch job
-		mirrorValidateGroup.PATCH("", s.createJob)
+		mirrorValidateGroup.POST("", s.createJob)
 		// mirror online
-		mirrorValidateGroup.PUT("", s.registerMirror)
+		mirrorValidateGroup.HEAD("", s.registerMirror)
 		// post job status
-		mirrorValidateGroup.POST("", s.updateJob)
+		mirrorValidateGroup.PATCH("", s.updateJob)
 		mirrorValidateGroup.POST("size", s.updateMirrorSize)
 		mirrorValidateGroup.POST("schedule", s.updateSchedule)
 		mirrorValidateGroup.POST("enable", s.enableJob)
 		mirrorValidateGroup.POST("disable", s.disableJob)
 		// for tunasynctl to post commands
 		mirrorValidateGroup.POST("cmd", s.handleClientCmd)
+	}
+
+	// list announcements
+	s.engine.GET("/announcements", s.listAnnouncement)
+	s.engine.GET("/api/news", s.listAnnouncement)
+
+	// announcementID should be valid in this route group
+	announcementValidateGroup := s.engine.Group("/announcement/:id")
+	{
+		// create or patch announcement
+		announcementValidateGroup.POST("", s.createAnnouncement)
+		// delete specified announcement
+		announcementValidateGroup.DELETE("", s.deleteAnnouncement)
+		// get announcement detail
+		announcementValidateGroup.GET("", s.getAnnouncement)
+	}
+
+	// list files
+	s.engine.GET("/files", s.listFile)
+	s.engine.GET("/api/files", s.listFile)
+
+	// fileID should be valid in this route group
+	fileValidateGroup := s.engine.Group("/file/:id")
+	{
+		// create or patch file
+		fileValidateGroup.POST("", s.createFile)
+		// delete specified file
+		fileValidateGroup.DELETE("", s.deleteFile)
+		// get file detail
+		fileValidateGroup.GET("", s.getFile)
 	}
 
 	return s, nil
@@ -328,7 +358,18 @@ func (m *Manager) listJob(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), jobs)
 
 	for _, v := range jobs.Items {
-		w := internal.MirrorStatus{ID: v.Name, Alias: v.Spec.Config.Alias, JobStatus: v.Status}
+		tp := v.Spec.Config.Type
+		if tp == "" {
+			tp = v1beta1.Mirror
+		}
+		w := internal.MirrorStatus{
+			ID:        v.Name,
+			Alias:     v.Spec.Config.Alias,
+			Desc:      v.Spec.Config.Desc,
+			Url:       v.Spec.Config.Url,
+			Type:      tp,
+			JobStatus: v.Status,
+		}
 		ws = append(ws, w)
 	}
 
@@ -358,7 +399,7 @@ func (m *Manager) getJob(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, internal.MirrorStatus{ID: mirrorID, Alias: job.Spec.Config.Alias, JobStatus: job.Status})
+	c.JSON(http.StatusOK, job.Status)
 }
 
 func (m *Manager) getJobConfig(c *gin.Context) {
@@ -494,7 +535,7 @@ func (m *Manager) updateSchedule(c *gin.Context) {
 
 func (m *Manager) updateJob(c *gin.Context) {
 	mirrorID := c.Param("id")
-	var status internal.MirrorStatus
+	var status v1beta1.JobStatus
 	c.BindJSON(&status)
 
 	m.rwmu.Lock()
@@ -533,12 +574,12 @@ func (m *Manager) updateJob(c *gin.Context) {
 	// for logging
 	switch status.Status {
 	case v1beta1.Syncing:
-		runLog.Info(fmt.Sprintf("Job [%s] starts syncing", status.ID))
+		runLog.Info(fmt.Sprintf("Job [%s] starts syncing", mirrorID))
 	default:
-		runLog.Info(fmt.Sprintf("Job [%s] %s", status.ID, status.Status))
+		runLog.Info(fmt.Sprintf("Job [%s] %s", mirrorID, status.Status))
 	}
 
-	curJob.Status = status.JobStatus
+	curJob.Status = status
 	err = m.client.Status().Update(c.Request.Context(), curJob)
 	if err != nil {
 		err := fmt.Errorf("failed to update job %s: %s",
@@ -698,4 +739,233 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 		}
 		c.String(r.StatusCode, string(body))
 	}
+}
+
+func (m *Manager) GetAnnouncement(c *gin.Context, announcementID string) (*v1beta1.Announcement, error) {
+	news := new(v1beta1.Announcement)
+	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: announcementID}, news)
+	if err != nil {
+		err := fmt.Errorf("failed to get announcement: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return nil, err
+	}
+	return news, err
+}
+
+func (m *Manager) createAnnouncement(c *gin.Context) {
+	announcementID := c.Param("id")
+
+	var e error
+	oNews := new(v1beta1.Announcement)
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
+	news := v1beta1.Announcement{
+		TypeMeta:   metav1.TypeMeta{Kind: "Announcement", APIVersion: v1beta1.GroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{Name: announcementID, Namespace: m.namespace},
+	}
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: announcementID}, oNews); err != nil || oNews == nil {
+		var newsSpec v1beta1.AnnouncementSpec
+		c.BindJSON(&newsSpec)
+		news.Spec = newsSpec
+	} else {
+		newsSpec := make(map[string]string)
+		c.BindJSON(&newsSpec)
+		for k, v := range newsSpec {
+			if k == "title" {
+				oNews.Spec.Title = v
+			} else if k == "content" {
+				oNews.Spec.Content = v
+			}
+		}
+		news.Spec = oNews.Spec
+	}
+	e = m.client.Patch(c.Request.Context(), &news, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
+
+	if e != nil {
+		err := fmt.Errorf("failed to patch announcement %s: %s",
+			announcementID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + announcementID + " succeed"})
+}
+
+// listAnnouncement respond with all announcements
+func (m *Manager) listAnnouncement(c *gin.Context) {
+	var ws []v1beta1.AnnouncementSpec
+
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
+	announcements := new(v1beta1.AnnouncementList)
+	err := m.client.List(c.Request.Context(), announcements)
+
+	for _, v := range announcements.Items {
+		ws = append(ws, v.Spec)
+	}
+
+	if err != nil {
+		err := fmt.Errorf("failed to list announcements: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, ws)
+}
+
+func (m *Manager) getAnnouncement(c *gin.Context) {
+	announcementID := c.Param("id")
+
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
+
+	announcement, err := m.GetAnnouncement(c, announcementID)
+	if err != nil {
+		err := fmt.Errorf("failed to get announcement %s: %s",
+			announcementID, err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, announcement.Spec)
+}
+
+// deleteAnnouncement deletes one announcement by id
+func (m *Manager) deleteAnnouncement(c *gin.Context) {
+	announcementID := c.Param("id")
+
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
+	news, err := m.GetAnnouncement(c, announcementID)
+
+	if err != nil {
+		return
+	}
+	err = m.client.Delete(c.Request.Context(), news)
+	if err != nil {
+		err := fmt.Errorf("failed to delete announcement: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	runLog.Info(fmt.Sprintf("Announcement <%s> deleted", announcementID))
+	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
+}
+
+func (m *Manager) GetFile(c *gin.Context, fileID string) (*v1beta1.File, error) {
+	file := new(v1beta1.File)
+	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, file)
+	if err != nil {
+		err := fmt.Errorf("failed to get file: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return nil, err
+	}
+	return file, err
+}
+
+func (m *Manager) createFile(c *gin.Context) {
+	fileID := c.Param("id")
+
+	var fileStatus v1beta1.FileStatus
+	c.BindJSON(&fileStatus)
+	if fileStatus.Distro == "" {
+		fileStatus.Distro = fileID
+	}
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
+	file := v1beta1.File{
+		TypeMeta:   metav1.TypeMeta{Kind: "File", APIVersion: v1beta1.GroupVersion.String()},
+		ObjectMeta: metav1.ObjectMeta{Name: fileID, Namespace: m.namespace},
+		Status:     fileStatus,
+	}
+
+	e := m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
+
+	if e != nil {
+		err := fmt.Errorf("failed to patch file %s: %s",
+			fileID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + fileID + " succeed"})
+}
+
+// listFile respond with all files
+func (m *Manager) listFile(c *gin.Context) {
+	var ws []v1beta1.FileStatus
+
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
+	files := new(v1beta1.FileList)
+	err := m.client.List(c.Request.Context(), files)
+
+	for _, v := range files.Items {
+		ws = append(ws, v.Status)
+	}
+
+	if err != nil {
+		err := fmt.Errorf("failed to list files: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, ws)
+}
+
+func (m *Manager) getFile(c *gin.Context) {
+	fileID := c.Param("id")
+
+	m.rwmu.RLock()
+	defer m.rwmu.RUnlock()
+
+	file, err := m.GetFile(c, fileID)
+	if err != nil {
+		err := fmt.Errorf("failed to get file %s: %s",
+			fileID, err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	c.JSON(http.StatusOK, file.Status)
+}
+
+// deleteFile deletes one file by id
+func (m *Manager) deleteFile(c *gin.Context) {
+	fileID := c.Param("id")
+
+	m.rwmu.Lock()
+	defer m.rwmu.Unlock()
+	file, err := m.GetFile(c, fileID)
+
+	if err != nil {
+		return
+	}
+	err = m.client.Delete(c.Request.Context(), file)
+	if err != nil {
+		err := fmt.Errorf("failed to delete file: %s",
+			err.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+	runLog.Info(fmt.Sprintf("File <%s> deleted", fileID))
+	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
 }

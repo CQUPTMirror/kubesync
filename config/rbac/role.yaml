@@ -56,6 +56,58 @@ rules:
 - apiGroups:
   - mirror.redrock.team
   resources:
+  - announcements
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - announcements/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - announcements/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - files
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - files/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
+  - files/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mirror.redrock.team
+  resources:
   - jobs
   verbs:
   - create

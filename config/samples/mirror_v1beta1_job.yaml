@@ -11,6 +11,9 @@ metadata:
 spec:
   config:
     alias: tlpretest  # Alias of this mirror, optional
+    desc: "Test job"  # Description of this mirror, optional
+#   url:  # Specify url for front to redirect, optional
+#   type:  # Type of this mirror, mirror / proxy, if value is proxy, job will not create and just return info in api, optional
     upstream: "rsync://tug.org/tlpretest/"  # The upstream url of this job, required
     provider: rsync  # The sync provider of this job, required
 #    command:  # The sync command of this job, optional

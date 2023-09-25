@@ -1,0 +1,13 @@
+apiVersion: mirror.redrock.team/v1beta1
+kind: Announcement
+metadata:
+  labels:
+    app.kubernetes.io/name: announcement
+    app.kubernetes.io/instance: announcement-sample
+    app.kubernetes.io/part-of: kubesync
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: kubesync
+  name: announcement-sample
+spec:
+  title: "news1"
+  content: "welcome"

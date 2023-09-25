@@ -1,4 +1,6 @@
 resources:
 - bases/mirror.redrock.team_jobs.yaml
 - bases/mirror.redrock.team_managers.yaml
+- bases/mirror.redrock.team_announcements.yaml
+- bases/mirror.redrock.team_files.yaml
 #+kubebuilder:scaffold:crdkustomizeresource

@@ -248,16 +248,7 @@ func (w *Worker) registerWorker() {
 	url := fmt.Sprintf("%s/job/%s", w.cfg.APIBase, w.Name())
 	logger.Debugf("register on manager url: %s", url)
 	for retry := 10; retry > 0; {
-		client := w.httpClient
-		if client == nil {
-			client, _ = CreateHTTPClient()
-		}
-		req, err := http.NewRequest("PUT", url, nil)
-		if err != nil {
-			continue
-		}
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		if _, err := client.Do(req); err != nil {
+		if _, err := HandleRequest("HEAD", url, nil, w.httpClient); err != nil {
 			logger.Errorf("Failed to register worker")
 			retry--
 			if retry > 0 {
@@ -272,10 +263,7 @@ func (w *Worker) registerWorker() {
 
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
-	smsg := internal.MirrorStatus{
-		ID:        w.cfg.Name,
-		JobStatus: v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg},
-	}
+	smsg := v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg}
 
 	// Certain Providers (rsync for example) may know the size of mirror,
 	// so we report it to Manager here
@@ -287,7 +275,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		"%s/job/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := PostJSON(url, smsg, w.httpClient); err != nil {
+	if _, err := HandleRequest("PATCH", url, smsg, w.httpClient); err != nil {
 		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
 }
@@ -299,13 +287,13 @@ func (w *Worker) updateSchedInfo(nextScheduled int64) {
 		"%s/job/%s/schedule", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := PostJSON(url, msg, w.httpClient); err != nil {
+	if _, err := HandleRequest("POST", url, msg, w.httpClient); err != nil {
 		logger.Errorf("Failed to upload schedule: %s", err.Error())
 	}
 }
 
-func (w *Worker) fetchJobStatus() internal.MirrorStatus {
-	var mirror internal.MirrorStatus
+func (w *Worker) fetchJobStatus() v1beta1.JobStatus {
+	var mirror v1beta1.JobStatus
 
 	url := fmt.Sprintf("%s/job/%s", w.cfg.APIBase, w.Name())
 

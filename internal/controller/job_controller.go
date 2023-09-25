@@ -79,6 +79,9 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	} else {
 		managerName = managerList.Items[0].Name
 	}
+	if job.Spec.Config.Type != "" && job.Spec.Config.Type != mirrorv1beta1.Mirror {
+		return ctrl.Result{}, nil
+	}
 
 	pvc, err := r.desiredPersistentVolumeClaim(&job)
 	if err != nil {
