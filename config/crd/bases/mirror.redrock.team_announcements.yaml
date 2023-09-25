@@ -35,15 +35,25 @@ spec:
           spec:
             description: AnnouncementSpec defines the desired state of Announcement
             properties:
+              author:
+                type: string
               content:
                 type: string
               title:
                 type: string
-            required:
-            - title
             type: object
           status:
             description: AnnouncementStatus defines the observed state of Announcement
+            properties:
+              editTime:
+                format: int64
+                type: integer
+              pubTime:
+                format: int64
+                type: integer
+            required:
+            - editTime
+            - pubTime
             type: object
         type: object
     served: true

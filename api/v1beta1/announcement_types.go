@@ -23,12 +23,16 @@ import (
 
 // AnnouncementSpec defines the desired state of Announcement
 type AnnouncementSpec struct {
-	Title   string `json:"title"`
+	Title   string `json:"title,omitempty"`
+	Author  string `json:"author,omitempty"`
 	Content string `json:"content,omitempty"`
 }
 
 // AnnouncementStatus defines the observed state of Announcement
-type AnnouncementStatus struct{}
+type AnnouncementStatus struct {
+	PublishTime int64 `json:"pubTime"`
+	EditTime    int64 `json:"editTime"`
+}
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status

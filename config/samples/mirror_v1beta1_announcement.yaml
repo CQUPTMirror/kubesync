@@ -10,4 +10,5 @@ metadata:
   name: announcement-sample
 spec:
   title: "news1"
+  author: "admin"
   content: "welcome"

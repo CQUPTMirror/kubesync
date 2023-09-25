@@ -9,9 +9,5 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: file-sample
 spec:
-status:
-  category: app
-  distro: file  # optional
-  urls:
-    - name: testfile
-      url: /100mb.test
+  type: app
+  alias: file  # optional

@@ -187,7 +187,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	fileValidateGroup := s.engine.Group("/file/:id")
 	{
 		// create or patch file
-		fileValidateGroup.POST("", s.createFile)
+		fileValidateGroup.POST("", s.updateFile)
 		// delete specified file
 		fileValidateGroup.DELETE("", s.deleteFile)
 		// get file detail
@@ -770,17 +770,22 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		var newsSpec v1beta1.AnnouncementSpec
 		c.BindJSON(&newsSpec)
 		news.Spec = newsSpec
+		news.Status.PublishTime = time.Now().Unix()
+		news.Status.EditTime = time.Now().Unix()
 	} else {
 		newsSpec := make(map[string]string)
 		c.BindJSON(&newsSpec)
-		for k, v := range newsSpec {
-			if k == "title" {
-				oNews.Spec.Title = v
-			} else if k == "content" {
-				oNews.Spec.Content = v
-			}
+		if v, ok := newsSpec["title"]; ok {
+			oNews.Spec.Title = v
+		}
+		if v, ok := newsSpec["content"]; ok {
+			oNews.Spec.Content = v
+		}
+		if v, ok := newsSpec["author"]; ok {
+			oNews.Spec.Author = v
 		}
 		news.Spec = oNews.Spec
+		news.Status.EditTime = time.Now().Unix()
 	}
 	e = m.client.Patch(c.Request.Context(), &news, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 
@@ -792,12 +797,22 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
+
+	e = m.client.Status().Update(c.Request.Context(), &news)
+	if e != nil {
+		err := fmt.Errorf("failed to update announcement %s status: %s",
+			announcementID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
 	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + announcementID + " succeed"})
 }
 
 // listAnnouncement respond with all announcements
 func (m *Manager) listAnnouncement(c *gin.Context) {
-	var ws []v1beta1.AnnouncementSpec
+	var ws []internal.AnnouncementInfo
 
 	m.rwmu.RLock()
 	defer m.rwmu.RUnlock()
@@ -805,7 +820,7 @@ func (m *Manager) listAnnouncement(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), announcements)
 
 	for _, v := range announcements.Items {
-		ws = append(ws, v.Spec)
+		ws = append(ws, internal.AnnouncementInfo{ID: v.Name, AnnouncementSpec: v.Spec, AnnouncementStatus: v.Status})
 	}
 
 	if err != nil {
@@ -875,26 +890,59 @@ func (m *Manager) GetFile(c *gin.Context, fileID string) (*v1beta1.File, error) 
 	return file, err
 }
 
-func (m *Manager) createFile(c *gin.Context) {
+func (m *Manager) updateFile(c *gin.Context) {
 	fileID := c.Param("id")
 
-	var fileStatus v1beta1.FileStatus
-	c.BindJSON(&fileStatus)
-	if fileStatus.Distro == "" {
-		fileStatus.Distro = fileID
-	}
+	oFile := new(v1beta1.File)
+	var nFile internal.FileBase
+	c.BindJSON(&nFile)
+
 	m.rwmu.Lock()
 	defer m.rwmu.Unlock()
 	file := v1beta1.File{
 		TypeMeta:   metav1.TypeMeta{Kind: "File", APIVersion: v1beta1.GroupVersion.String()},
 		ObjectMeta: metav1.ObjectMeta{Name: fileID, Namespace: m.namespace},
-		Status:     fileStatus,
+		Spec:       v1beta1.FileSpec{Type: nFile.Type, Alias: nFile.Alias},
+		Status:     v1beta1.FileStatus{},
 	}
 
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); err != nil || oFile == nil {
+		if file.Spec.Type == "" {
+			nFile.Type = v1beta1.OS
+		}
+
+		if len(nFile.Files) > 0 {
+			file.Status.Files = nFile.Files
+			file.Status.UpdateTime = time.Now().Unix()
+		}
+	} else {
+		if file.Spec.Type == "" {
+			nFile.Type = oFile.Spec.Type
+		}
+
+		if nFile.Alias == "" {
+			nFile.Alias = oFile.Spec.Alias
+		}
+
+		if len(nFile.Files) > 0 {
+			file.Status.Files = nFile.Files
+			file.Status.UpdateTime = time.Now().Unix()
+		}
+	}
 	e := m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
 
 	if e != nil {
 		err := fmt.Errorf("failed to patch file %s: %s",
+			fileID, e.Error(),
+		)
+		c.Error(err)
+		m.returnErrJSON(c, http.StatusInternalServerError, err)
+		return
+	}
+
+	e = m.client.Status().Update(c.Request.Context(), &file)
+	if e != nil {
+		err := fmt.Errorf("failed to update file %s status: %s",
 			fileID, e.Error(),
 		)
 		c.Error(err)
@@ -906,7 +954,7 @@ func (m *Manager) createFile(c *gin.Context) {
 
 // listFile respond with all files
 func (m *Manager) listFile(c *gin.Context) {
-	var ws []v1beta1.FileStatus
+	var ws []internal.FileInfo
 
 	m.rwmu.RLock()
 	defer m.rwmu.RUnlock()
@@ -914,7 +962,7 @@ func (m *Manager) listFile(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), files)
 
 	for _, v := range files.Items {
-		ws = append(ws, v.Status)
+		ws = append(ws, internal.FileInfo{ID: v.Name, FileBase: internal.FileBase{FileSpec: v.Spec, FileStatus: v.Status}})
 	}
 
 	if err != nil {

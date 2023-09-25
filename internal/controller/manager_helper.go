@@ -70,6 +70,10 @@ func (r *ManagerReconciler) desiredRole(manager *v1beta1.Manager) (*v1.Role, err
 				Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},
 			{
+				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"announcements/status"},
+				Verbs: []string{"get", "patch", "update"},
+			},
+			{
 				APIGroups: []string{v1beta1.GroupVersion.Group}, Resources: []string{"files"},
 				Verbs: []string{"create", "delete", "get", "list", "patch", "update", "watch"},
 			},

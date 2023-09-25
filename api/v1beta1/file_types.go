@@ -34,13 +34,15 @@ type Url struct {
 }
 
 // FileSpec defines the desired state of File
-type FileSpec struct{}
+type FileSpec struct {
+	Type  FileType `json:"type,omitempty"`
+	Alias string   `json:"alias,omitempty"`
+}
 
 // FileStatus defines the observed state of File
 type FileStatus struct {
-	Category FileType `json:"category"`
-	Distro   string   `json:"distro,omitempty"`
-	Urls     []Url    `json:"urls"`
+	Files      []Url `json:"files,omitempty"`
+	UpdateTime int64 `json:"updateTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true

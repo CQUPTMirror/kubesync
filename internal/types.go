@@ -7,6 +7,24 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
+type AnnouncementInfo struct {
+	ID string `json:"id"`
+
+	v1beta1.AnnouncementSpec
+	v1beta1.AnnouncementStatus
+}
+
+type FileBase struct {
+	v1beta1.FileSpec
+	v1beta1.FileStatus
+}
+
+type FileInfo struct {
+	ID string `json:"id"`
+
+	FileBase
+}
+
 type MirrorStatus struct {
 	ID    string             `json:"id"`
 	Alias string             `json:"alias"`
