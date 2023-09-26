@@ -370,6 +370,10 @@ func (m *Manager) listJob(c *gin.Context) {
 			Type:      tp,
 			JobStatus: v.Status,
 		}
+		if w.Type == v1beta1.Proxy {
+			w.Upstream = v.Spec.Config.Upstream
+			w.Status = v1beta1.Cached
+		}
 		ws = append(ws, w)
 	}
 
@@ -1004,10 +1008,7 @@ func (m *Manager) getFile(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, internal.FileInfo{
-		ID:       file.Name,
-		FileBase: internal.FileBase{Type: file.Spec.Type, Alias: file.Spec.Alias, FileStatus: file.Status},
-	})
+	c.JSON(http.StatusOK, internal.FileBase{Type: file.Spec.Type, Alias: file.Spec.Alias, FileStatus: file.Status})
 }
 
 // deleteFile deletes one file by id

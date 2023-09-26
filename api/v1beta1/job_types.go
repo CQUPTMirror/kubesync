@@ -35,7 +35,7 @@ type JobConfig struct {
 	Url           string     `json:"url,omitempty"`
 	Type          MirrorType `json:"type,omitempty"`
 	Upstream      string     `json:"upstream"`
-	Provider      string     `json:"provider"`
+	Provider      string     `json:"provider,omitempty"`
 	Command       string     `json:"command,omitempty"`
 	Concurrent    int        `json:"concurrent,omitempty"`
 	Interval      int        `json:"interval,omitempty"`
@@ -89,6 +89,7 @@ const (
 	PreSyncing SyncStatus = "pre-syncing"
 	Paused     SyncStatus = "paused"
 	Disabled   SyncStatus = "disabled"
+	Cached     SyncStatus = "cached"
 )
 
 // JobStatus defines the observed state of Job
