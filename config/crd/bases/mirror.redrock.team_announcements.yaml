@@ -41,6 +41,8 @@ spec:
                 type: string
               title:
                 type: string
+            required:
+            - title
             type: object
           status:
             description: AnnouncementStatus defines the observed state of Announcement

@@ -64,11 +64,7 @@ func CreateHTTPClient() (*http.Client, error) {
 }
 
 // HandleRequest post/head url
-func HandleRequest(method, url string, obj interface{}, client *http.Client) (*http.Response, error) {
-	if client == nil {
-		client, _ = CreateHTTPClient()
-	}
-
+func (w *Worker) HandleRequest(method, url string, obj interface{}) (*http.Response, error) {
 	var b *bytes.Buffer = nil
 
 	if obj != nil {
@@ -83,16 +79,12 @@ func HandleRequest(method, url string, obj interface{}, client *http.Client) (*h
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
-	return client.Do(req)
+	return w.httpClient.Do(req)
 }
 
 // GetJSON gets a json response from url
-func GetJSON(url string, obj interface{}, client *http.Client) (*http.Response, error) {
-	if client == nil {
-		client, _ = CreateHTTPClient()
-	}
-
-	resp, err := client.Get(url)
+func (w *Worker) GetJSON(url string, obj interface{}) (*http.Response, error) {
+	resp, err := w.httpClient.Get(url)
 	if err != nil {
 		return resp, err
 	}

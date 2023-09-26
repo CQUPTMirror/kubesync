@@ -29,6 +29,7 @@ resources:
 - api:
     crdVersion: v1
     namespaced: true
+  controller: true
   domain: redrock.team
   group: mirror
   kind: Announcement

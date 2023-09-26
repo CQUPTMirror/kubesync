@@ -23,7 +23,7 @@ import (
 
 // AnnouncementSpec defines the desired state of Announcement
 type AnnouncementSpec struct {
-	Title   string `json:"title,omitempty"`
+	Title   string `json:"title"`
 	Author  string `json:"author,omitempty"`
 	Content string `json:"content,omitempty"`
 }

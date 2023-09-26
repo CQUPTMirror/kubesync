@@ -34,6 +34,7 @@ func NewTUNASyncWorker(cfg *Config) *Worker {
 	if cfg.Retry == 0 {
 		cfg.Retry = defaultMaxRetry
 	}
+	client, _ := CreateHTTPClient()
 
 	w := &Worker{
 		cfg: cfg,
@@ -43,6 +44,8 @@ func NewTUNASyncWorker(cfg *Config) *Worker {
 		exit:        make(chan empty),
 
 		schedule: newSchedule(),
+
+		httpClient: client,
 	}
 
 	w.initJobs()
@@ -248,7 +251,7 @@ func (w *Worker) registerWorker() {
 	url := fmt.Sprintf("%s/job/%s", w.cfg.APIBase, w.Name())
 	logger.Debugf("register on manager url: %s", url)
 	for retry := 10; retry > 0; {
-		if _, err := HandleRequest("HEAD", url, nil, w.httpClient); err != nil {
+		if _, err := w.HandleRequest("HEAD", url, nil); err != nil {
 			logger.Errorf("Failed to register worker")
 			retry--
 			if retry > 0 {
@@ -275,7 +278,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		"%s/job/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := HandleRequest("PATCH", url, smsg, w.httpClient); err != nil {
+	if _, err := w.HandleRequest("PATCH", url, smsg); err != nil {
 		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
 }
@@ -287,7 +290,7 @@ func (w *Worker) updateSchedInfo(nextScheduled int64) {
 		"%s/job/%s/schedule", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
-	if _, err := HandleRequest("POST", url, msg, w.httpClient); err != nil {
+	if _, err := w.HandleRequest("POST", url, msg); err != nil {
 		logger.Errorf("Failed to upload schedule: %s", err.Error())
 	}
 }
@@ -297,7 +300,7 @@ func (w *Worker) fetchJobStatus() v1beta1.JobStatus {
 
 	url := fmt.Sprintf("%s/job/%s", w.cfg.APIBase, w.Name())
 
-	if _, err := GetJSON(url, &mirror, w.httpClient); err != nil {
+	if _, err := w.GetJSON(url, &mirror); err != nil {
 		logger.Errorf("Failed to fetch job status: %s", err.Error())
 	}
 

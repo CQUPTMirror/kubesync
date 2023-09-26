@@ -770,8 +770,6 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 		var newsSpec v1beta1.AnnouncementSpec
 		c.BindJSON(&newsSpec)
 		news.Spec = newsSpec
-		news.Status.PubTime = time.Now().Unix()
-		news.Status.EditTime = time.Now().Unix()
 	} else {
 		newsSpec := make(map[string]string)
 		c.BindJSON(&newsSpec)
@@ -785,17 +783,6 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 			oNews.Spec.Author = v
 		}
 		news.Spec = oNews.Spec
-		news.Status.EditTime = time.Now().Unix()
-	}
-
-	e = m.client.Status().Update(c.Request.Context(), &news)
-	if e != nil {
-		err := fmt.Errorf("failed to update announcement %s status: %s",
-			announcementID, e.Error(),
-		)
-		c.Error(err)
-		m.returnErrJSON(c, http.StatusInternalServerError, err)
-		return
 	}
 
 	e = m.client.Patch(c.Request.Context(), &news, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)

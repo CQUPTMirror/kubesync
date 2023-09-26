@@ -48,9 +48,6 @@ type ManagerReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mirror.redrock.team,resources=announcements,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=mirror.redrock.team,resources=announcements/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=mirror.redrock.team,resources=announcements/finalizers,verbs=update
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=files,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=files/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=files/finalizers,verbs=update
