@@ -65,16 +65,20 @@ func CreateHTTPClient() (*http.Client, error) {
 
 // HandleRequest post/head url
 func (w *Worker) HandleRequest(method, url string, obj interface{}) (*http.Response, error) {
-	var b *bytes.Buffer = nil
+	var req *http.Request
+	var err error
 
 	if obj != nil {
+		var b *bytes.Buffer
 		b = new(bytes.Buffer)
 		if err := json.NewEncoder(b).Encode(obj); err != nil {
 			return nil, err
 		}
+		req, err = http.NewRequest(method, url, b)
+	} else {
+		req, err = http.NewRequest(method, url, nil)
 	}
 
-	req, err := http.NewRequest(method, url, b)
 	if err != nil {
 		return nil, err
 	}
