@@ -79,7 +79,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Debug = GetBoolEnv("DEBUG")
 
 	cfg.Name = GetStringEnv("NAME", "")
-	cfg.Provider = GetStringEnv("PROVIDER", "")
+	cfg.Provider = GetStringEnv("PROVIDER", "rsync")
 	cfg.Upstream = GetStringEnv("UPSTREAM", "")
 	cfg.LogDir = GetStringEnv("LOG_DIR", "/var/log")
 	cfg.MirrorDir = GetStringEnv("MIRROR_DIR", "/data")

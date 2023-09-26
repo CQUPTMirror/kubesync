@@ -155,8 +155,15 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 			},
 		},
 	}
+	if manager.Spec.Deploy.Image == "" {
+		app.Spec.Template.Spec.Containers[0].Image = r.Config.ManagerImage
+	}
 	if manager.Spec.Deploy.ImagePullPolicy != "" {
 		app.Spec.Template.Spec.Containers[0].ImagePullPolicy = manager.Spec.Deploy.ImagePullPolicy
+	} else {
+		if r.Config.PullPolicy != "" {
+			app.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
+		}
 	}
 	if manager.Spec.Deploy.MemoryLimit != "" || manager.Spec.Deploy.CPULimit != "" {
 		app.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
@@ -169,6 +176,10 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 	}
 	if manager.Spec.Deploy.ImagePullSecrets != nil {
 		app.Spec.Template.Spec.ImagePullSecrets = manager.Spec.Deploy.ImagePullSecrets
+	} else {
+		if r.Config.PullSecret != "" {
+			app.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: r.Config.PullSecret}}
+		}
 	}
 	if manager.Spec.Deploy.NodeName != "" {
 		app.Spec.Template.Spec.NodeName = manager.Spec.Deploy.NodeName
@@ -178,6 +189,10 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 	}
 	if manager.Spec.Deploy.Tolerations != nil {
 		app.Spec.Template.Spec.Tolerations = manager.Spec.Deploy.Tolerations
+	}
+
+	if app.Spec.Template.Spec.Containers[0].Image == "" {
+		return nil, nil
 	}
 
 	if err := ctrl.SetControllerReference(manager, &app, r.Scheme); err != nil {

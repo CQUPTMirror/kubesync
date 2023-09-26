@@ -85,10 +85,18 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 	if job.Spec.Volume.AccessMode != "" {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{job.Spec.Volume.AccessMode}
 	} else {
-		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+		if r.Config.AccessMode != "" {
+			pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.PersistentVolumeAccessMode(r.Config.AccessMode)}
+		} else {
+			pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce}
+		}
 	}
 	if job.Spec.Volume.StorageClass != nil {
 		pvc.Spec.StorageClassName = job.Spec.Volume.StorageClass
+	} else {
+		if r.Config.StorageClass != "" {
+			pvc.Spec.StorageClassName = &r.Config.StorageClass
+		}
 	}
 
 	if err := ctrl.SetControllerReference(job, &pvc, r.Scheme); err != nil {
@@ -130,7 +138,34 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		},
 	}
 
+	pullPolicy := job.Spec.Deploy.ImagePullPolicy
+	if pullPolicy == "" && r.Config.PullPolicy != "" {
+		pullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
+	} else {
+		pullPolicy = corev1.PullIfNotPresent
+	}
+	if job.Spec.Deploy.ImagePullSecrets != nil {
+		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
+	} else {
+		if r.Config.PullSecret != "" {
+			app.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: r.Config.PullSecret}}
+		}
+	}
+	if job.Spec.Deploy.NodeName != "" {
+		app.Spec.Template.Spec.NodeName = job.Spec.Deploy.NodeName
+	}
+	if job.Spec.Deploy.Affinity != nil {
+		app.Spec.Template.Spec.Affinity = job.Spec.Deploy.Affinity
+	}
+	if job.Spec.Deploy.Tolerations != nil {
+		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
+	}
+
 	if job.Status.Status != v1beta1.Disabled {
+		if job.Spec.Config.Upstream == "" {
+			return nil, errors.New("upstream not set")
+		}
+
 		env := []corev1.EnvVar{
 			{Name: "NAME", Value: job.Name},
 			{Name: "PROVIDER", Value: job.Spec.Config.Provider},
@@ -160,9 +195,6 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 				}
 			}
 		}
-		if job.Spec.Config.Provider == "" || job.Spec.Config.Upstream == "" {
-			return nil, errors.New("provider or upstream not set")
-		}
 		if job.Spec.Config.Debug != "" {
 			env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
 		}
@@ -177,11 +209,12 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			FailureThreshold:    5,
 		}
 		container := corev1.Container{
-			Name:           job.Name,
-			Image:          job.Spec.Deploy.Image,
-			Env:            env,
-			LivenessProbe:  probe,
-			ReadinessProbe: probe,
+			Name:            job.Name,
+			Image:           job.Spec.Deploy.Image,
+			ImagePullPolicy: pullPolicy,
+			Env:             env,
+			LivenessProbe:   probe,
+			ReadinessProbe:  probe,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
@@ -192,8 +225,9 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 				{ContainerPort: ApiPort, Name: "api", Protocol: "TCP"},
 			},
 		}
-		if job.Spec.Deploy.ImagePullPolicy != "" {
-			container.ImagePullPolicy = job.Spec.Deploy.ImagePullPolicy
+
+		if container.Image == "" {
+			container.Image = r.Config.WorkerImage
 		}
 		if job.Spec.Deploy.MemoryLimit != "" || job.Spec.Deploy.CPULimit != "" {
 			container.Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
@@ -204,21 +238,11 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 				container.Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(job.Spec.Deploy.CPULimit)
 			}
 		}
-		app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, container)
+		if container.Image != "" {
+			app.Spec.Template.Spec.Containers = append(app.Spec.Template.Spec.Containers, container)
+		}
 	}
 
-	if job.Spec.Deploy.ImagePullSecrets != nil {
-		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
-	}
-	if job.Spec.Deploy.NodeName != "" {
-		app.Spec.Template.Spec.NodeName = job.Spec.Deploy.NodeName
-	}
-	if job.Spec.Deploy.Affinity != nil {
-		app.Spec.Template.Spec.Affinity = job.Spec.Deploy.Affinity
-	}
-	if job.Spec.Deploy.Tolerations != nil {
-		app.Spec.Template.Spec.Tolerations = job.Spec.Deploy.Tolerations
-	}
 	disableFront, disableRsync, frontCmd, rsyncCmd, frontImage, rsyncImage := r.checkRsyncFront(job)
 	if !disableFront {
 		frontProbe := &corev1.Probe{
@@ -234,7 +258,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		frontContainer := corev1.Container{
 			Name:            job.Name + "-front",
 			Image:           frontImage,
-			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
+			ImagePullPolicy: pullPolicy,
 			LivenessProbe:   frontProbe,
 			ReadinessProbe:  frontProbe,
 			VolumeMounts: []corev1.VolumeMount{
@@ -266,7 +290,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		rsyncContainer := corev1.Container{
 			Name:            job.Name + "-rsync",
 			Image:           rsyncImage,
-			ImagePullPolicy: job.Spec.Deploy.ImagePullPolicy,
+			ImagePullPolicy: pullPolicy,
 			LivenessProbe:   rsyncProbe,
 			ReadinessProbe:  rsyncProbe,
 			VolumeMounts: []corev1.VolumeMount{

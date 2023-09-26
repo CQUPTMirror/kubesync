@@ -52,6 +52,18 @@ spec:
         image: ghcr.io/cquptmirror/controller:dev
         imagePullPolicy: Always
         env: []  # all environments are optional
+#        - name: MANAGER_IMAGE
+#          value: ghcr.io/cquptmirror/manager:dev  # Default image used to deploy manager
+#        - name: WORKER_IMAGE
+#          value: ghcr.io/cquptmirror/worker:dev  # Default image used to deploy worker
+#        - name: PULL_POLICY
+#          value: Always  # Default imagePullPolicy used to deploy all type of containers
+#        - name: PULL_SECRET
+#          value:  # Default imagePullSecret used to deploy all type of containers
+#        - name: STORAGE_CLASS
+#          value:  # Default storageClass of worker pvc
+#        - name: ACCESS_MODE
+#          value: ReadWriteOnce  # Default accessMode of worker pvc
 #        - name: FRONT_IMAGE  # Default image used to deploy the directory service
 #          value: nginx / caddy
 #        - name: RSYNC_IMAGE  # Default image used to deploy the rsync service

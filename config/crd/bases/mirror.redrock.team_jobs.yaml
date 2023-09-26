@@ -1034,8 +1034,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                required:
-                - image
                 type: object
               ingress:
                 properties:
@@ -1063,7 +1061,6 @@ spec:
                 type: object
             required:
             - config
-            - deploy
             - volume
             type: object
           status:

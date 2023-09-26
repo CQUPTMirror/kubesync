@@ -646,7 +646,7 @@ func (m *Manager) enableJob(c *gin.Context) {
 		return
 	}
 
-	curJob.Status.Status = v1beta1.None
+	curJob.Status.Status = v1beta1.Created
 	curJob.Status.LastOnline = time.Now().Unix()
 	err = m.client.Status().Update(c.Request.Context(), curJob)
 

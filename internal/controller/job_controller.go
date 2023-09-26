@@ -33,17 +33,6 @@ import (
 	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
-type Config struct {
-	FrontImage string
-	RsyncImage string
-	FrontCmd   string
-	RsyncCmd   string
-	FrontHost  string
-	FrontTLS   string
-	FrontClass string
-	FrontAnn   map[string]string
-}
-
 // JobReconciler reconciles a Job object
 type JobReconciler struct {
 	client.Client
@@ -160,6 +149,8 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			})
 		}
 	}
+
+	job.Status.Status = mirrorv1beta1.Created
 
 	err = r.Status().Update(ctx, &job)
 	if err != nil {

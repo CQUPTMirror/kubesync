@@ -973,8 +973,6 @@ spec:
                           type: string
                       type: object
                     type: array
-                required:
-                - image
                 type: object
               ingress:
                 properties:
@@ -989,8 +987,6 @@ spec:
                   ingressClass:
                     type: string
                 type: object
-            required:
-            - deploy
             type: object
           status:
             description: ManagerStatus defines the observed state of Manager

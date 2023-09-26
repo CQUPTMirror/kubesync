@@ -74,7 +74,7 @@ type PVConfig struct {
 // JobSpec defines the desired state of Job
 type JobSpec struct {
 	Config  JobConfig     `json:"config"`
-	Deploy  JobDeploy     `json:"deploy"`
+	Deploy  JobDeploy     `json:"deploy,omitempty"`
 	Volume  PVConfig      `json:"volume"`
 	Ingress IngressConfig `json:"ingress,omitempty"`
 }
@@ -90,6 +90,7 @@ const (
 	Paused     SyncStatus = "paused"
 	Disabled   SyncStatus = "disabled"
 	Cached     SyncStatus = "cached"
+	Created    SyncStatus = "created"
 )
 
 // JobStatus defines the observed state of Job

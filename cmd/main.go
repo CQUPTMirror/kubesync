@@ -103,14 +103,20 @@ func main() {
 	}
 
 	config := controller.Config{
-		FrontImage: os.Getenv("FRONT_IMAGE"),
-		RsyncImage: os.Getenv("RSYNC_IMAGE"),
-		FrontCmd:   os.Getenv("FRONT_CMD"),
-		RsyncCmd:   os.Getenv("RSYNC_CMD"),
-		FrontHost:  os.Getenv("FRONT_HOST"),
-		FrontTLS:   os.Getenv("FRONT_TLS"),
-		FrontClass: os.Getenv("FRONT_CLASS"),
-		FrontAnn:   annItems,
+		ManagerImage: os.Getenv("MANAGER_IMAGE"),
+		WorkerImage:  os.Getenv("WORKER_IMAGE"),
+		PullPolicy:   os.Getenv("PULL_POLICY"),
+		PullSecret:   os.Getenv("PULL_SECRET"),
+		StorageClass: os.Getenv("STORAGE_CLASS"),
+		AccessMode:   os.Getenv("ACCESS_MODE"),
+		FrontImage:   os.Getenv("FRONT_IMAGE"),
+		RsyncImage:   os.Getenv("RSYNC_IMAGE"),
+		FrontCmd:     os.Getenv("FRONT_CMD"),
+		RsyncCmd:     os.Getenv("RSYNC_CMD"),
+		FrontHost:    os.Getenv("FRONT_HOST"),
+		FrontTLS:     os.Getenv("FRONT_TLS"),
+		FrontClass:   os.Getenv("FRONT_CLASS"),
+		FrontAnn:     annItems,
 	}
 
 	if err = (&controller.JobReconciler{

@@ -32,6 +32,23 @@ import (
 	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
+type Config struct {
+	ManagerImage string
+	WorkerImage  string
+	PullPolicy   string
+	PullSecret   string
+	StorageClass string
+	AccessMode   string
+	FrontImage   string
+	RsyncImage   string
+	FrontCmd     string
+	RsyncCmd     string
+	FrontHost    string
+	FrontTLS     string
+	FrontClass   string
+	FrontAnn     map[string]string
+}
+
 // ManagerReconciler reconciles a Manager object
 type ManagerReconciler struct {
 	client.Client

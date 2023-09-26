@@ -172,7 +172,7 @@ func TranslateRsyncErrorCode(cmdErr error) (exitCode int, msg string) {
 
 func GetStringEnv(key, def string) string {
 	val, ex := os.LookupEnv(key)
-	if !ex {
+	if !ex || val == "" {
 		return def
 	}
 	return val

@@ -10,8 +10,8 @@ metadata:
   name: manager-sample
 spec:
   deploy:
-    image: ghcr.io/cquptmirror/manager:dev  # Required
-    imagePullPolicy: Always
+    image: ghcr.io/cquptmirror/manager:dev  # Default use controller config, optional
+    imagePullPolicy: Always  # Optional
 #    imagePullSecrets:
 #    nodeName:
 #    affinity:

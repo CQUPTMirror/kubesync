@@ -15,7 +15,7 @@ spec:
 #   url:  # Specify url for front to redirect, optional
 #   type:  # Type of this mirror, mirror / proxy, if value is proxy, job will not create and just return info in api, optional
     upstream: "rsync://tug.org/tlpretest/"  # The upstream url of this job, required
-    provider: rsync  # The sync provider of this job, required
+    provider: rsync  # The sync provider of this job, default rsync, optional
 #    command:  # The sync command of this job, optional
 #    concurrent:  # The sync concurrent of this job, default 3, optional
 #    interval:  # The sync interval (minutes) of this job, default 1440, optional
@@ -33,8 +33,8 @@ spec:
 #    additionEnvs:  # The addition environments set to job container
 #    debug:  # Whether enable worker debug mode
   deploy:
-    image: ghcr.io/cquptmirror/worker:dev  # Required
-    imagePullPolicy: Always
+    image: ghcr.io/cquptmirror/worker:dev  # Default use controller config, optional
+    imagePullPolicy: Always  # Optional
 #    imagePullSecrets:
 #    nodeName:
 #    affinity:
