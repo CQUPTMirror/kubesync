@@ -48,11 +48,11 @@ spec:
                   properties:
                     name:
                       type: string
-                    url:
+                    path:
                       type: string
                   required:
                   - name
-                  - url
+                  - path
                   type: object
                 type: array
               updateTime:

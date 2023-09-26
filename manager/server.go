@@ -908,49 +908,56 @@ func (m *Manager) updateFile(c *gin.Context) {
 
 	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); err != nil || oFile == nil {
 		if file.Spec.Type == "" {
-			nFile.Type = v1beta1.OS
-		}
-
-		if len(nFile.Files) > 0 {
-			file.Status.Files = nFile.Files
-			file.Status.UpdateTime = time.Now().Unix()
+			file.Spec.Type = v1beta1.OS
 		}
 	} else {
 		if file.Spec.Type == "" {
-			nFile.Type = oFile.Spec.Type
+			file.Spec.Type = oFile.Spec.Type
 		}
 
-		if nFile.Alias == "" {
-			nFile.Alias = oFile.Spec.Alias
+		if file.Spec.Alias == "" {
+			file.Spec.Alias = oFile.Spec.Alias
 		}
+	}
 
+	if file.Spec.Type != oFile.Spec.Type || file.Spec.Alias != oFile.Spec.Alias {
+		e := m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
+		if e != nil {
+			err := fmt.Errorf("failed to patch file %s info: %s",
+				fileID, e.Error(),
+			)
+			c.Error(err)
+			m.returnErrJSON(c, http.StatusInternalServerError, err)
+			return
+		}
 		if len(nFile.Files) > 0 {
-			file.Status.Files = nFile.Files
-			file.Status.UpdateTime = time.Now().Unix()
+			if e := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); e != nil {
+				err := fmt.Errorf("failed to get file: %s",
+					e.Error(),
+				)
+				c.Error(err)
+				m.returnErrJSON(c, http.StatusInternalServerError, err)
+				return
+			}
 		}
 	}
 
-	e := m.client.Status().Update(c.Request.Context(), &file)
-	if e != nil {
-		err := fmt.Errorf("failed to update file %s status: %s",
-			fileID, e.Error(),
-		)
-		c.Error(err)
-		m.returnErrJSON(c, http.StatusInternalServerError, err)
-		return
+	if len(nFile.Files) > 0 {
+		oFile.Status.Files = nFile.Files
+		oFile.Status.UpdateTime = time.Now().Unix()
+
+		e := m.client.Status().Update(c.Request.Context(), oFile)
+		if e != nil {
+			err := fmt.Errorf("failed to update file %s list: %s",
+				fileID, e.Error(),
+			)
+			c.Error(err)
+			m.returnErrJSON(c, http.StatusInternalServerError, err)
+			return
+		}
 	}
 
-	e = m.client.Patch(c.Request.Context(), &file, client.Apply, []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}...)
-	if e != nil {
-		err := fmt.Errorf("failed to patch file %s: %s",
-			fileID, e.Error(),
-		)
-		c.Error(err)
-		m.returnErrJSON(c, http.StatusInternalServerError, err)
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{_infoKey: "patch " + fileID + " succeed"})
+	c.JSON(http.StatusOK, gin.H{_infoKey: "update " + fileID + " succeed"})
 }
 
 // listFile respond with all files

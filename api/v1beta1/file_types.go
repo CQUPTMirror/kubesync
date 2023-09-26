@@ -30,7 +30,7 @@ const (
 
 type Url struct {
 	Name string `json:"name"`
-	Url  string `json:"url"`
+	Path string `json:"path"`
 }
 
 // FileSpec defines the desired state of File
