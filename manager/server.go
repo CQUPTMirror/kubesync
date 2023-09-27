@@ -367,6 +367,7 @@ func (m *Manager) listJob(c *gin.Context) {
 			Alias:     v.Spec.Config.Alias,
 			Desc:      v.Spec.Config.Desc,
 			Url:       v.Spec.Config.Url,
+			HelpUrl:   v.Spec.Config.HelpUrl,
 			Type:      tp,
 			JobStatus: v.Status,
 		}

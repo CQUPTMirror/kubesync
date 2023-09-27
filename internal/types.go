@@ -30,11 +30,12 @@ type FileInfo struct {
 }
 
 type MirrorStatus struct {
-	ID    string             `json:"id"`
-	Alias string             `json:"alias"`
-	Desc  string             `json:"desc"`
-	Url   string             `json:"url"`
-	Type  v1beta1.MirrorType `json:"type"`
+	ID      string             `json:"id"`
+	Alias   string             `json:"alias"`
+	Desc    string             `json:"desc"`
+	Url     string             `json:"url"`
+	HelpUrl string             `json:"helpUrl"`
+	Type    v1beta1.MirrorType `json:"type"`
 
 	v1beta1.JobStatus
 }

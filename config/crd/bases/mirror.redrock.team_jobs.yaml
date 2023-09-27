@@ -61,6 +61,8 @@ spec:
                     type: string
                   failOnMatch:
                     type: string
+                  helpUrl:
+                    type: string
                   interval:
                     type: integer
                   provider:

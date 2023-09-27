@@ -33,6 +33,7 @@ type JobConfig struct {
 	Alias         string     `json:"alias,omitempty"`
 	Desc          string     `json:"desc,omitempty"`
 	Url           string     `json:"url,omitempty"`
+	HelpUrl       string     `json:"helpUrl,omitempty"`
 	Type          MirrorType `json:"type,omitempty"`
 	Upstream      string     `json:"upstream"`
 	Provider      string     `json:"provider,omitempty"`
