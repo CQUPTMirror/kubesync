@@ -150,7 +150,9 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		}
 	}
 
-	job.Status.Status = mirrorv1beta1.Created
+	if job.Status.Status == "" {
+		job.Status.Status = mirrorv1beta1.Created
+	}
 
 	err = r.Status().Update(ctx, &job)
 	if err != nil {
