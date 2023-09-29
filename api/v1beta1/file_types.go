@@ -28,9 +28,16 @@ const (
 	App FileType = "app"
 )
 
-type Url struct {
-	Name string `json:"name"`
-	Path string `json:"path"`
+type FileInfo struct {
+	Name         string `json:"name"`
+	Ext          string `json:"ext"`
+	MajorVersion string `json:"majorVersion"`
+	Version      string `json:"version"`
+	Arch         string `json:"arch"`
+	Edition      string `json:"edition"`
+	EditionType  string `json:"editionType"`
+	Part         int    `json:"part"`
+	Path         string `json:"path"`
 }
 
 // FileSpec defines the desired state of File
@@ -41,8 +48,8 @@ type FileSpec struct {
 
 // FileStatus defines the observed state of File
 type FileStatus struct {
-	Files      []Url `json:"files"`
-	UpdateTime int64 `json:"updateTime"`
+	Files      []FileInfo `json:"files"`
+	UpdateTime int64      `json:"updateTime"`
 }
 
 //+kubebuilder:object:root=true

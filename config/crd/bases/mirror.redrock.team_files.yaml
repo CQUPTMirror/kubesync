@@ -46,13 +46,34 @@ spec:
               files:
                 items:
                   properties:
+                    arch:
+                      type: string
+                    edition:
+                      type: string
+                    editionType:
+                      type: string
+                    ext:
+                      type: string
+                    majorVersion:
+                      type: string
                     name:
                       type: string
+                    part:
+                      type: integer
                     path:
                       type: string
+                    version:
+                      type: string
                   required:
+                  - arch
+                  - edition
+                  - editionType
+                  - ext
+                  - majorVersion
                   - name
+                  - part
                   - path
+                  - version
                   type: object
                 type: array
               updateTime:
