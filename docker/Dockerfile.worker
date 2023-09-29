@@ -26,7 +26,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o ma
 FROM debian:12-slim
 RUN apt update && apt install -y --no-install-recommends rsync python3-requests && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /workspace/main /usr/bin
-ADD https://github.com/CQUPTMirror/iso-recognizer/raw/master/main.py /usr/bin/recognizer
-RUN chmod +x /usr/bin/recognizer
+COPY worker/utils/reporter /usr/bin/reporter
+RUN chmod +x /usr/bin/reporter
 
 ENTRYPOINT ["/usr/bin/main"]
