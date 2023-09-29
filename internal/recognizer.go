@@ -36,6 +36,7 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 		if len(nameSp) > 3 {
 			switch f.MajorVersion {
 			case "6":
+				fallthrough
 			case "7":
 				f.Arch = nameSp[1]
 				f.Edition = nameSp[2]
@@ -65,9 +66,64 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 				if f.Edition == "live" {
 					f.Edition, f.EditionType = f.EditionType, f.Edition
 				}
+				if f.Arch == "source" {
+					f.Edition, f.Arch = f.Arch, ""
+				}
 				if len(nameSp) == start+4 {
 					f.Part, _ = strconv.Atoi(nameSp[start+3])
 				}
+			}
+		}
+	case strings.HasPrefix(name, "edubuntu-"):
+		fallthrough
+	case strings.HasPrefix(name, "kubuntu-"):
+		fallthrough
+	case strings.HasPrefix(name, "lubuntu-"):
+		fallthrough
+	case strings.HasPrefix(name, "mythbuntu-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntucinnamon-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntukylin-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntustudio-"):
+		fallthrough
+	case strings.HasPrefix(name, "xubuntu-"):
+		nameSp := strings.Split(name, "-")
+		if len(nameSp) >= 4 {
+			f.MajorVersion = nameSp[0]
+			f.Version = nameSp[1]
+			f.Edition = nameSp[2]
+			start := 3
+			if f.Edition == "beta" {
+				f.Version = fmt.Sprintf("%s-%s", nameSp[1], nameSp[2])
+				f.Edition = nameSp[start]
+				start += 1
+			}
+			if len(nameSp) >= start+1 {
+				f.Arch = nameSp[start]
+			}
+		}
+	case strings.HasPrefix(name, "ubuntu-budgie-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntu-gnome-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntu-mate-"):
+		fallthrough
+	case strings.HasPrefix(name, "ubuntu-unity-"):
+		nameSp := strings.Split(name, "-")
+		if len(nameSp) >= 5 {
+			f.MajorVersion = fmt.Sprintf("%s-%s", nameSp[0], nameSp[1])
+			f.Version = nameSp[2]
+			f.Edition = nameSp[3]
+			start := 4
+			if f.Edition == "beta" {
+				f.Version = fmt.Sprintf("%s-%s", nameSp[2], nameSp[3])
+				f.Edition = nameSp[start]
+				start += 1
+			}
+			if len(nameSp) >= start+1 {
+				f.Arch = nameSp[start]
 			}
 		}
 	case strings.HasPrefix(name, "ubuntu-"):
@@ -83,9 +139,25 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 			if nameSp[start] == "live" {
 				start += 1
 			}
-			if len(nameSp) >= start+2 {
-				f.Edition = nameSp[start]
-				f.Arch = nameSp[start+1]
+			if nameSp[start] == "src" {
+				f.Edition = "src"
+				f.Part, _ = strconv.Atoi(nameSp[start+1])
+			} else {
+				if len(nameSp) >= start+2 {
+					f.Edition = nameSp[start]
+					if f.Edition == "legacy" {
+						f.Edition = fmt.Sprintf("%s-%s", f.Edition, nameSp[start+1])
+						start += 1
+					}
+					f.Arch = nameSp[start+1]
+					if f.Arch == "legacy" {
+						f.Edition = fmt.Sprintf("%s-%s", f.Edition, "legacy")
+						f.Arch = nameSp[start+2]
+					}
+					if strings.HasSuffix(f.Arch, "+intel") {
+						f.Arch = fmt.Sprintf("%s-iot", f.Arch)
+					}
+				}
 			}
 		}
 	case strings.HasPrefix(name, "Fedora-"):
@@ -189,6 +261,24 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 		if len(nameSp) > 1 {
 			f.Version = nameSp[0]
 			f.Arch = nameSp[1]
+		}
+	case strings.HasPrefix(name, "alpine-"):
+		name = strings.TrimPrefix(name, "alpine-")
+		nameSp := strings.Split(name, "-")
+		switch len(nameSp) {
+		case 2:
+			f.Version = nameSp[0]
+			f.Arch = nameSp[1]
+		case 3:
+			f.Edition = nameSp[0]
+			f.Version = nameSp[1]
+			f.Arch = nameSp[2]
+		}
+	case strings.HasPrefix(name, "proxmox-"):
+		nameSp := strings.Split(name, "_")
+		if len(nameSp) == 2 {
+			f.MajorVersion = nameSp[0]
+			f.Version = nameSp[1]
 		}
 	}
 	part := ""
