@@ -55,13 +55,16 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 		if len(nameSp) >= 3 {
 			start := 0
 			if '0' > nameSp[start][0] || nameSp[start][0] > '9' {
-				f.EditionType = nameSp[start]
+				f.Edition = nameSp[start]
 				start += 1
 			}
 			f.Version = nameSp[start]
 			f.Arch = nameSp[start+1]
 			if len(nameSp) >= start+3 {
-				f.Edition = nameSp[start+2]
+				f.EditionType = nameSp[start+2]
+				if f.Edition == "live" {
+					f.Edition, f.EditionType = f.EditionType, f.Edition
+				}
 				if len(nameSp) == start+4 {
 					f.Part, _ = strconv.Atoi(nameSp[start+3])
 				}
@@ -108,7 +111,7 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 		name = strings.TrimPrefix(name, "kali-linux-")
 		nameSp := strings.Split(name, "-")
 		f.Version = nameSp[0]
-		if len(nameSp) >= 5 {
+		if len(nameSp) >= 3 {
 			start := 1
 			if nameSp[1][0] == 'W' {
 				f.Version = fmt.Sprintf("%s-%s", nameSp[0], nameSp[1])
@@ -117,6 +120,9 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 			switch len(nameSp) {
 			case start + 2:
 				f.Edition = nameSp[start]
+				if f.Edition == "installer" {
+					f.Edition = ""
+				}
 				f.Arch = nameSp[start+1]
 			case start + 3:
 				f.Edition = nameSp[start+1]
@@ -124,7 +130,7 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 			}
 		}
 	case strings.HasPrefix(name, "openSUSE-"):
-		if strings.Contains(name, "Micro") && strings.HasSuffix(name, "-Current") {
+		if !strings.Contains(name, "Micro") && strings.HasSuffix(name, "-Current") {
 			name = strings.TrimPrefix(name, "openSUSE-")
 			nameSp := strings.Split(name, "-")
 			f.MajorVersion = nameSp[0]
