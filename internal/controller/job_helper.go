@@ -139,10 +139,12 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	}
 
 	pullPolicy := job.Spec.Deploy.ImagePullPolicy
-	if pullPolicy == "" && r.Config.PullPolicy != "" {
-		pullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
-	} else {
-		pullPolicy = corev1.PullIfNotPresent
+	if pullPolicy == "" {
+		if r.Config.PullPolicy != "" {
+			pullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
+		} else {
+			pullPolicy = corev1.PullIfNotPresent
+		}
 	}
 	if job.Spec.Deploy.ImagePullSecrets != nil {
 		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
