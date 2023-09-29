@@ -43,7 +43,7 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 			default:
 				f.Version = nameSp[1]
 				if stream {
-					f.Version = fmt.Sprintf("stream-%s", nameSp[1])
+					f.Version = fmt.Sprintf("Stream-%s", nameSp[1])
 				}
 				f.Arch = nameSp[2]
 				f.Edition = nameSp[3]
