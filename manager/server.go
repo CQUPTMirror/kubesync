@@ -902,6 +902,16 @@ func (m *Manager) updateFile(c *gin.Context) {
 	var nFile internal.FileBase
 	c.BindJSON(&nFile)
 
+	var fileInfo []v1beta1.FileInfo
+	if len(nFile.Files) > 0 {
+		for _, v := range nFile.Files {
+			info := internal.Recognizer(v)
+			if info.Name != "" {
+				fileInfo = append(fileInfo, info)
+			}
+		}
+	}
+
 	m.rwmu.Lock()
 	defer m.rwmu.Unlock()
 	file := v1beta1.File{
@@ -935,7 +945,7 @@ func (m *Manager) updateFile(c *gin.Context) {
 			m.returnErrJSON(c, http.StatusInternalServerError, err)
 			return
 		}
-		if len(nFile.Files) > 0 {
+		if len(fileInfo) > 0 {
 			if e := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); e != nil {
 				err := fmt.Errorf("failed to get file: %s",
 					e.Error(),
@@ -947,8 +957,8 @@ func (m *Manager) updateFile(c *gin.Context) {
 		}
 	}
 
-	if len(nFile.Files) > 0 {
-		oFile.Status.Files = nFile.Files
+	if len(fileInfo) > 0 {
+		oFile.Status.Files = fileInfo
 		oFile.Status.UpdateTime = time.Now().Unix()
 
 		e := m.client.Status().Update(c.Request.Context(), oFile)
@@ -976,10 +986,7 @@ func (m *Manager) listFile(c *gin.Context) {
 
 	for _, v := range files.Items {
 		if len(v.Status.Files) > 0 {
-			ws = append(ws, internal.FileInfo{
-				ID:       v.Name,
-				FileBase: internal.FileBase{Type: v.Spec.Type, Alias: v.Spec.Alias, FileStatus: v.Status},
-			})
+			ws = append(ws, internal.FileInfo{ID: v.Name, Type: v.Spec.Type, Alias: v.Spec.Alias, FileStatus: v.Status})
 		}
 	}
 
@@ -1009,7 +1016,7 @@ func (m *Manager) getFile(c *gin.Context) {
 		m.returnErrJSON(c, http.StatusInternalServerError, err)
 		return
 	}
-	c.JSON(http.StatusOK, internal.FileBase{Type: file.Spec.Type, Alias: file.Spec.Alias, FileStatus: file.Status})
+	c.JSON(http.StatusOK, internal.FileInfo{ID: fileID, Type: file.Spec.Type, Alias: file.Spec.Alias, FileStatus: file.Status})
 }
 
 // deleteFile deletes one file by id

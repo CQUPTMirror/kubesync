@@ -19,14 +19,15 @@ type AnnouncementInfo struct {
 type FileBase struct {
 	Type  v1beta1.FileType `json:"type"`
 	Alias string           `json:"alias"`
-
-	v1beta1.FileStatus
+	Files []string         `json:"files"`
 }
 
 type FileInfo struct {
-	ID string `json:"id"`
+	ID    string           `json:"id"`
+	Type  v1beta1.FileType `json:"type"`
+	Alias string           `json:"alias"`
 
-	FileBase
+	v1beta1.FileStatus
 }
 
 type MirrorStatus struct {
