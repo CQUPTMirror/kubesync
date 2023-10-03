@@ -12,10 +12,12 @@ spec:
   config:
     alias: tlpretest  # Alias of this mirror, optional
     desc: "Test job"  # Description of this mirror, optional
-#   url:  # Specify url for front to redirect, optional
-#   type:  # Type of this mirror, mirror / proxy, if value is proxy, job will not create and just return info in api, optional
+#    url:  # Specify url for front to redirect, optional
+#    helpUrl:  # Specify helpUrl for manager to return, optional
+#    type:  # Type of this mirror, mirror / proxy, if value is proxy, job will not create and just return info in api, optional
     upstream: "rsync://tug.org/tlpretest/"  # The upstream url of this job, required
     provider: rsync  # The sync provider of this job, default rsync, optional
+#    mirrorDir:  # Specify a dir to store mirror files, pvc will mount to /data, so the path should include /data, default /data, optional
 #    command:  # The sync command of this job, optional
 #    concurrent:  # The sync concurrent of this job, default 3, optional
 #    interval:  # The sync interval (minutes) of this job, default 1440, optional

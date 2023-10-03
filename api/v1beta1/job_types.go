@@ -37,6 +37,7 @@ type JobConfig struct {
 	Type          MirrorType `json:"type,omitempty"`
 	Upstream      string     `json:"upstream"`
 	Provider      string     `json:"provider,omitempty"`
+	MirrorDir     string     `json:"mirrorDir,omitempty"`
 	Command       string     `json:"command,omitempty"`
 	Concurrent    int        `json:"concurrent,omitempty"`
 	Interval      int        `json:"interval,omitempty"`

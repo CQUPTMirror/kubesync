@@ -65,6 +65,8 @@ spec:
                     type: string
                   interval:
                     type: integer
+                  mirrorDir:
+                    type: string
                   provider:
                     type: string
                   retry:

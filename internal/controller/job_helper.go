@@ -172,6 +172,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			{Name: "NAME", Value: job.Name},
 			{Name: "PROVIDER", Value: job.Spec.Config.Provider},
 			{Name: "UPSTREAM", Value: job.Spec.Config.Upstream},
+			{Name: "MIRROR_DIR", Value: job.Spec.Config.MirrorDir},
 			{Name: "CONCURRENT", Value: strconv.Itoa(job.Spec.Config.Concurrent)},
 			{Name: "INTERVAL", Value: strconv.Itoa(job.Spec.Config.Interval)},
 			{Name: "RETRY", Value: strconv.Itoa(job.Spec.Config.Retry)},
