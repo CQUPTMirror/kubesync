@@ -65,7 +65,7 @@ spec:
                     type: string
                   interval:
                     type: integer
-                  mirrorDir:
+                  mirrorPath:
                     type: string
                   provider:
                     type: string

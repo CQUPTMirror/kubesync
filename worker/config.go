@@ -12,6 +12,7 @@ type Config struct {
 	Upstream   string `toml:"upstream"`
 	LogDir     string `toml:"log_dir"`
 	MirrorDir  string `toml:"mirror_dir"`
+	MirrorPath string `toml:"mirror_path"`
 	Concurrent int    `toml:"concurrent"`
 	Interval   int    `toml:"interval"`
 	Retry      int    `toml:"retry"`
@@ -83,6 +84,7 @@ func LoadConfig() (*Config, error) {
 	cfg.Upstream = GetStringEnv("UPSTREAM", "")
 	cfg.LogDir = GetStringEnv("LOG_DIR", "/var/log")
 	cfg.MirrorDir = GetStringEnv("MIRROR_DIR", "/data")
+	cfg.MirrorPath = GetStringEnv("MIRROR_PATH", "")
 
 	if cfg.Name == "" || cfg.Provider == "" || cfg.Upstream == "" {
 		return cfg, errors.New("failed to get mirror config")

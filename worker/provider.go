@@ -70,6 +70,9 @@ func newMirrorProvider(cfg *Config) mirrorProvider {
 	}
 
 	mirrorDir := filepath.Join(cfg.MirrorDir, cfg.Name)
+	if cfg.MirrorPath != "" {
+		mirrorDir = cfg.MirrorPath
+	}
 	logDir := formatLogDir(cfg.LogDir)
 
 	var provider mirrorProvider
