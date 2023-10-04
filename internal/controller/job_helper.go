@@ -146,10 +146,6 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			pullPolicy = corev1.PullIfNotPresent
 		}
 	}
-	mountPath := "/data/" + job.Name
-	if job.Spec.Config.MirrorPath != "" {
-		mountPath = job.Spec.Config.MirrorPath
-	}
 	if job.Spec.Deploy.ImagePullSecrets != nil {
 		app.Spec.Template.Spec.ImagePullSecrets = job.Spec.Deploy.ImagePullSecrets
 	} else {
@@ -225,7 +221,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
-					MountPath: mountPath,
+					MountPath: "/data/" + job.Name,
 				},
 			},
 			Ports: []corev1.ContainerPort{
@@ -271,7 +267,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
-					MountPath: mountPath,
+					MountPath: "/data/" + job.Name,
 				},
 			},
 			Ports: []corev1.ContainerPort{
@@ -303,7 +299,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
-					MountPath: mountPath,
+					MountPath: "/data/" + job.Name,
 				},
 			},
 			Ports: []corev1.ContainerPort{
