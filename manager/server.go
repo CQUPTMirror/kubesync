@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
@@ -377,6 +378,10 @@ func (m *Manager) listJob(c *gin.Context) {
 		}
 		ws = append(ws, w)
 	}
+
+	sort.Slice(ws, func(i, j int) bool {
+		return ws[i].ID < ws[j].ID
+	})
 
 	if err != nil {
 		err := fmt.Errorf("failed to list mirrors: %s",
@@ -822,6 +827,10 @@ func (m *Manager) listAnnouncement(c *gin.Context) {
 		})
 	}
 
+	sort.Slice(ws, func(i, j int) bool {
+		return ws[i].ID < ws[j].ID
+	})
+
 	if err != nil {
 		err := fmt.Errorf("failed to list announcements: %s",
 			err.Error(),
@@ -989,6 +998,10 @@ func (m *Manager) listFile(c *gin.Context) {
 			ws = append(ws, internal.FileInfo{ID: v.Name, Type: v.Spec.Type, Alias: v.Spec.Alias, FileStatus: v.Status})
 		}
 	}
+
+	sort.Slice(ws, func(i, j int) bool {
+		return ws[i].ID < ws[j].ID
+	})
 
 	if err != nil {
 		err := fmt.Errorf("failed to list files: %s",
