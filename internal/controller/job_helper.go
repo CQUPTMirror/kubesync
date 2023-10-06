@@ -106,6 +106,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 }
 
 func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*appsv1.Deployment, error) {
+	enableServiceLinks := false
 	app := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
 		ObjectMeta: metav1.ObjectMeta{
@@ -122,7 +123,8 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 					Labels: map[string]string{"job": job.Name},
 				},
 				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{},
+					EnableServiceLinks: &enableServiceLinks,
+					Containers:         []corev1.Container{},
 					Volumes: []corev1.Volume{
 						{
 							Name: job.Name,

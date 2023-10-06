@@ -109,6 +109,7 @@ func (r *ManagerReconciler) desiredRoleBinding(manager *v1beta1.Manager) (*v1.Ro
 }
 
 func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1.Deployment, error) {
+	enableServiceLinks := false
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
 			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ManagerPort)},
@@ -135,6 +136,7 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 					Labels: map[string]string{"manager": manager.Name},
 				},
 				Spec: corev1.PodSpec{
+					EnableServiceLinks: &enableServiceLinks,
 					Containers: []corev1.Container{
 						{
 							Name:  manager.Name,
