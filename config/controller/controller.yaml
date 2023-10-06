@@ -104,5 +104,6 @@ spec:
           requests:
             cpu: 10m
             memory: 64Mi
+      enableServiceLinks: false
       serviceAccountName: controller-sa
       terminationGracePeriodSeconds: 10

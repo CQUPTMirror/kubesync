@@ -94,7 +94,7 @@ func (w *Worker) makeHTTPServer() {
 			return
 		}
 
-		logger.Noticef("Received command: %v", cmd)
+		logger.Noticef("Received command: %+v", cmd)
 
 		// No matter what command, the existing job
 		// schedule should be flushed
@@ -278,6 +278,7 @@ func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 		"%s/job/%s", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
+	logger.Debugf("reporting data: %+v", smsg)
 	if _, err := w.HandleRequest("PATCH", url, smsg); err != nil {
 		logger.Errorf("Failed to update mirror(%s) status: %s", w.Name(), err.Error())
 	}
@@ -290,6 +291,7 @@ func (w *Worker) updateSchedInfo(nextScheduled int64) {
 		"%s/job/%s/schedule", w.cfg.APIBase, w.Name(),
 	)
 	logger.Debugf("reporting on manager url: %s", url)
+	logger.Debugf("reporting data: %+v", msg)
 	if _, err := w.HandleRequest("POST", url, msg); err != nil {
 		logger.Errorf("Failed to upload schedule: %s", err.Error())
 	}
