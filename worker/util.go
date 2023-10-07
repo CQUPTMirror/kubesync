@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -131,6 +132,45 @@ func ExtractSizeFromRsyncLog(logFile string) string {
 	// (?m) flag enables multi-line mode
 	re := regexp.MustCompile(`(?m)^Total file size: ([0-9\.]+[KMGTP]?) bytes`)
 	return ExtractSizeFromLog(logFile, re)
+}
+
+// ExtractSizeFromWalk extracts the size from path
+func ExtractSizeFromWalk(path string) (size string) {
+	sizes := make(chan int64)
+	readSize := func(path string, file os.FileInfo, err error) error {
+		if err != nil || file == nil {
+			return nil
+		}
+		if !file.IsDir() {
+			sizes <- file.Size()
+		}
+		return nil
+	}
+
+	go func() {
+		filepath.Walk(path, readSize)
+		close(sizes)
+	}()
+
+	used := int64(0)
+	for s := range sizes {
+		used += s
+	}
+
+	switch {
+	case used > T:
+		size = fmt.Sprintf("%.2fT", float64(used)/float64(T))
+	case used > G:
+		size = fmt.Sprintf("%.2fG", float64(used)/float64(G))
+	case used > M:
+		size = fmt.Sprintf("%.2fM", float64(used)/float64(M))
+	case used > K:
+		size = fmt.Sprintf("%.2fK", float64(used)/float64(K))
+	default:
+		size = fmt.Sprintf("%dB", used)
+	}
+
+	return
 }
 
 // ExtractSizeFromFileSystem extracts the size from filesystem

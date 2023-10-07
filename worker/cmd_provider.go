@@ -106,7 +106,7 @@ func (p *cmdProvider) Run(started chan empty) error {
 	if p.sizePattern != nil {
 		p.dataSize = ExtractSizeFromLog(p.LogFile(), p.sizePattern)
 	} else {
-		p.dataSize = ExtractSizeFromFileSystem(p.WorkingDir())
+		p.dataSize = ExtractSizeFromWalk(p.WorkingDir())
 	}
 	return nil
 }
