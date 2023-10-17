@@ -253,6 +253,11 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 						f.Arch = nameSp[start]
 					}
 				}
+			case "Kubic":
+				if len(nameSp) >= 3 {
+					f.EditionType = nameSp[1]
+					f.Arch = nameSp[2]
+				}
 			}
 		}
 	case strings.HasPrefix(name, "archlinux-"):
@@ -278,6 +283,27 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 		nameSp := strings.Split(name, "_")
 		if len(nameSp) == 2 {
 			f.MajorVersion = nameSp[0]
+			f.Version = nameSp[1]
+		}
+	case strings.HasPrefix(name, "AlmaLinux-"):
+		name = strings.TrimPrefix(name, "AlmaLinux-")
+		nameSp := strings.Split(name, "-")
+		f.Version = nameSp[0]
+		if len(nameSp) >= 3 {
+			start := 1
+			if nameSp[start] == "latest" {
+				start += 1
+			}
+			f.Arch = nameSp[start+1]
+			f.EditionType = nameSp[start+2]
+			if f.EditionType == "Live" {
+				f.Edition = strings.Join(nameSp[start+3:], "-")
+			}
+		}
+	case strings.HasPrefix(name, "texlive"):
+		name = strings.TrimPrefix(name, "texlive")
+		nameSp := strings.Split(name, "-")
+		if len(nameSp) > 1 {
 			f.Version = nameSp[1]
 		}
 	}
