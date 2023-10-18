@@ -294,10 +294,10 @@ func Recognizer(filepath string) (f v1beta1.FileInfo) {
 			if nameSp[start] == "latest" {
 				start += 1
 			}
-			f.Arch = nameSp[start+1]
-			f.EditionType = nameSp[start+2]
+			f.Arch = nameSp[start]
+			f.EditionType = nameSp[start+1]
 			if f.EditionType == "Live" {
-				f.Edition = strings.Join(nameSp[start+3:], "-")
+				f.Edition = strings.Join(nameSp[start+2:], "-")
 			}
 		}
 	case strings.HasPrefix(name, "texlive"):
