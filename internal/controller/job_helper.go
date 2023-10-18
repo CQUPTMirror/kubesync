@@ -82,6 +82,9 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 			},
 		},
 	}
+	if job.Spec.Volume.Size == "" {
+		pvc.Spec.Resources.Requests[corev1.ResourceStorage] = resource.MustParse("50Gi")
+	}
 	if job.Spec.Volume.AccessMode != "" {
 		pvc.Spec.AccessModes = []corev1.PersistentVolumeAccessMode{job.Spec.Volume.AccessMode}
 	} else {

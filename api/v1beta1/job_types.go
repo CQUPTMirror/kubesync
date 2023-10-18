@@ -27,6 +27,7 @@ type MirrorType string
 const (
 	Mirror MirrorType = "mirror"
 	Proxy  MirrorType = "proxy"
+	Git    MirrorType = "git"
 )
 
 type JobConfig struct {
@@ -68,7 +69,7 @@ type JobDeploy struct {
 }
 
 type PVConfig struct {
-	Size         string                            `json:"size"`
+	Size         string                            `json:"size,omitempty"`
 	StorageClass *string                           `json:"storageClass,omitempty"`
 	AccessMode   corev1.PersistentVolumeAccessMode `json:"accessMode,omitempty"`
 }
@@ -77,7 +78,7 @@ type PVConfig struct {
 type JobSpec struct {
 	Config  JobConfig     `json:"config"`
 	Deploy  JobDeploy     `json:"deploy,omitempty"`
-	Volume  PVConfig      `json:"volume"`
+	Volume  PVConfig      `json:"volume,omitempty"`
 	Ingress IngressConfig `json:"ingress,omitempty"`
 }
 

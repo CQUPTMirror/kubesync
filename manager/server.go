@@ -359,22 +359,25 @@ func (m *Manager) listJob(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), jobs)
 
 	for _, v := range jobs.Items {
-		tp := v.Spec.Config.Type
-		if tp == "" {
-			tp = v1beta1.Mirror
-		}
 		w := internal.MirrorStatus{
 			ID:        v.Name,
 			Alias:     v.Spec.Config.Alias,
 			Desc:      v.Spec.Config.Desc,
 			Url:       v.Spec.Config.Url,
 			HelpUrl:   v.Spec.Config.HelpUrl,
-			Type:      tp,
+			Type:      v.Spec.Config.Type,
 			JobStatus: v.Status,
 		}
-		if w.Type == v1beta1.Proxy {
+		switch v.Spec.Config.Type {
+		case v1beta1.Proxy:
 			w.Upstream = v.Spec.Config.Upstream
 			w.Status = v1beta1.Cached
+		case v1beta1.Git:
+			w.Upstream = v.Spec.Config.Upstream
+			w.Status = v1beta1.Created
+			w.Type = v1beta1.Mirror
+		case "":
+			w.Type = v1beta1.Mirror
 		}
 		ws = append(ws, w)
 	}

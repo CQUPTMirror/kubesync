@@ -1060,12 +1060,9 @@ spec:
                     type: string
                   storageClass:
                     type: string
-                required:
-                - size
                 type: object
             required:
             - config
-            - volume
             type: object
           status:
             description: JobStatus defines the observed state of Job
