@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/api/apps/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,7 +120,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			}
 		}
 	} else {
-		deploy := new(v1beta1.Deployment)
+		deploy := new(appsv1.Deployment)
 		err := r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, deploy)
 		if err == nil || deploy != nil {
 			r.Delete(ctx, &v1.Ingress{
@@ -132,10 +131,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
 			})
-			r.Delete(ctx, &appsv1.Deployment{
-				TypeMeta:   metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
-				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
-			})
+			r.Delete(ctx, deploy)
 		}
 	}
 

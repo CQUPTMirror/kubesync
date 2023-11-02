@@ -20,6 +20,7 @@ package controller
 import (
 	"context"
 	"errors"
+	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/networking/v1"
@@ -28,8 +29,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	mirrorv1beta1 "github.com/CQUPTMirror/kubesync/api/v1beta1"
 )
 
 type Config struct {
@@ -64,6 +63,7 @@ type ManagerReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=files,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=mirror.redrock.team,resources=files/status,verbs=get;update;patch
@@ -134,7 +134,23 @@ func (r *ManagerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	err = r.Patch(ctx, app, client.Apply, applyOpts...)
+	switch app := app.(type) {
+	case *appsv1.Deployment:
+		ds := new(appsv1.DaemonSet)
+		if err := r.Get(ctx, client.ObjectKey{Name: manager.Name, Namespace: manager.Namespace}, ds); err == nil || ds != nil {
+			r.Delete(ctx, ds)
+		}
+		err = r.Patch(ctx, app, client.Apply, applyOpts...)
+	case *appsv1.DaemonSet:
+		dm := new(appsv1.Deployment)
+		if err := r.Get(ctx, client.ObjectKey{Name: manager.Name, Namespace: manager.Namespace}, dm); err == nil || dm != nil {
+			r.Delete(ctx, dm)
+		}
+		err = r.Patch(ctx, app, client.Apply, applyOpts...)
+	default:
+		return ctrl.Result{}, err
+	}
+
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -173,6 +189,7 @@ func (r *ManagerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&v1.Role{}).
 		Owns(&v1.RoleBinding{}).
+		Owns(&appsv1.DaemonSet{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&v12.Ingress{}).

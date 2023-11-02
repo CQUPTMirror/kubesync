@@ -974,6 +974,8 @@ spec:
                       type: object
                     type: array
                 type: object
+              deployType:
+                type: string
               ingress:
                 properties:
                   TLSSecret:

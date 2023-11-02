@@ -108,7 +108,11 @@ func (r *ManagerReconciler) desiredRoleBinding(manager *v1beta1.Manager) (*v1.Ro
 	return &roleBinding, nil
 }
 
-func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1.Deployment, error) {
+func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (metav1.Object, error) {
+	deployType := v1beta1.Deployment
+	if manager.Spec.DeployType != "" {
+		deployType = manager.Spec.DeployType
+	}
 	enableServiceLinks := false
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
@@ -120,87 +124,100 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (*appsv1
 		SuccessThreshold:    1,
 		FailureThreshold:    5,
 	}
-	app := appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
+	typeMeta := metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: string(deployType)}
+	objectMeta := metav1.ObjectMeta{Name: manager.Name, Namespace: manager.Namespace, Labels: map[string]string{"manager": manager.Name}}
+	labelSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"manager": manager.Name}}
+	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      manager.Name,
-			Namespace: manager.Namespace,
-			Labels:    map[string]string{"manager": manager.Name},
+			Labels: map[string]string{"manager": manager.Name},
 		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"manager": manager.Name},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"manager": manager.Name},
-				},
-				Spec: corev1.PodSpec{
-					EnableServiceLinks: &enableServiceLinks,
-					Containers: []corev1.Container{
-						{
-							Name:  manager.Name,
-							Image: manager.Spec.Deploy.Image,
-							Env: []corev1.EnvVar{
-								{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-								{Name: "ADDR", Value: fmt.Sprintf(":%d", ManagerPort)},
-							},
-							LivenessProbe:  probe,
-							ReadinessProbe: probe,
-							Ports: []corev1.ContainerPort{
-								{ContainerPort: ManagerPort, Name: "api", Protocol: "TCP"},
-							},
-						},
+		Spec: corev1.PodSpec{
+			EnableServiceLinks: &enableServiceLinks,
+			Containers: []corev1.Container{
+				{
+					Name:  manager.Name,
+					Image: manager.Spec.Deploy.Image,
+					Env: []corev1.EnvVar{
+						{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+						{Name: "ADDR", Value: fmt.Sprintf(":%d", ManagerPort)},
 					},
-					ServiceAccountName: manager.Name + "-sa",
+					LivenessProbe:  probe,
+					ReadinessProbe: probe,
+					Ports: []corev1.ContainerPort{
+						{ContainerPort: ManagerPort, Name: "api", Protocol: "TCP"},
+					},
 				},
 			},
+			ServiceAccountName: manager.Name + "-sa",
 		},
-	}
-	if manager.Spec.Deploy.Image == "" {
-		app.Spec.Template.Spec.Containers[0].Image = r.Config.ManagerImage
-	}
-	if manager.Spec.Deploy.ImagePullPolicy != "" {
-		app.Spec.Template.Spec.Containers[0].ImagePullPolicy = manager.Spec.Deploy.ImagePullPolicy
-	} else {
-		if r.Config.PullPolicy != "" {
-			app.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
-		}
-	}
-	if manager.Spec.Deploy.MemoryLimit != "" || manager.Spec.Deploy.CPULimit != "" {
-		app.Spec.Template.Spec.Containers[0].Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
-		if manager.Spec.Deploy.MemoryLimit != "" {
-			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsMemory] = resource.MustParse(manager.Spec.Deploy.MemoryLimit)
-		}
-		if manager.Spec.Deploy.CPULimit != "" {
-			app.Spec.Template.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(manager.Spec.Deploy.CPULimit)
-		}
-	}
-	if manager.Spec.Deploy.ImagePullSecrets != nil {
-		app.Spec.Template.Spec.ImagePullSecrets = manager.Spec.Deploy.ImagePullSecrets
-	} else {
-		if r.Config.PullSecret != "" {
-			app.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: r.Config.PullSecret}}
-		}
-	}
-	if manager.Spec.Deploy.NodeName != "" {
-		app.Spec.Template.Spec.NodeName = manager.Spec.Deploy.NodeName
-	}
-	if manager.Spec.Deploy.Affinity != nil {
-		app.Spec.Template.Spec.Affinity = manager.Spec.Deploy.Affinity
-	}
-	if manager.Spec.Deploy.Tolerations != nil {
-		app.Spec.Template.Spec.Tolerations = manager.Spec.Deploy.Tolerations
 	}
 
-	if app.Spec.Template.Spec.Containers[0].Image == "" {
+	if manager.Spec.Deploy.Image == "" {
+		podTemplate.Spec.Containers[0].Image = r.Config.ManagerImage
+	}
+	if podTemplate.Spec.Containers[0].Image == "" {
 		return nil, nil
 	}
 
-	if err := ctrl.SetControllerReference(manager, &app, r.Scheme); err != nil {
-		return &app, err
+	if manager.Spec.Deploy.ImagePullPolicy != "" {
+		podTemplate.Spec.Containers[0].ImagePullPolicy = manager.Spec.Deploy.ImagePullPolicy
+	} else {
+		if r.Config.PullPolicy != "" {
+			podTemplate.Spec.Containers[0].ImagePullPolicy = corev1.PullPolicy(r.Config.PullPolicy)
+		}
 	}
-	return &app, nil
+	if manager.Spec.Deploy.MemoryLimit != "" || manager.Spec.Deploy.CPULimit != "" {
+		podTemplate.Spec.Containers[0].Resources = corev1.ResourceRequirements{Limits: corev1.ResourceList{}}
+		if manager.Spec.Deploy.MemoryLimit != "" {
+			podTemplate.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsMemory] = resource.MustParse(manager.Spec.Deploy.MemoryLimit)
+		}
+		if manager.Spec.Deploy.CPULimit != "" {
+			podTemplate.Spec.Containers[0].Resources.Limits[corev1.ResourceLimitsCPU] = resource.MustParse(manager.Spec.Deploy.CPULimit)
+		}
+	}
+	if manager.Spec.Deploy.ImagePullSecrets != nil {
+		podTemplate.Spec.ImagePullSecrets = manager.Spec.Deploy.ImagePullSecrets
+	} else {
+		if r.Config.PullSecret != "" {
+			podTemplate.Spec.ImagePullSecrets = []corev1.LocalObjectReference{{Name: r.Config.PullSecret}}
+		}
+	}
+	if manager.Spec.Deploy.NodeName != "" {
+		podTemplate.Spec.NodeName = manager.Spec.Deploy.NodeName
+	}
+	if manager.Spec.Deploy.Affinity != nil {
+		podTemplate.Spec.Affinity = manager.Spec.Deploy.Affinity
+	}
+	if manager.Spec.Deploy.Tolerations != nil {
+		podTemplate.Spec.Tolerations = manager.Spec.Deploy.Tolerations
+	}
+
+	var app metav1.Object
+
+	switch deployType {
+	case v1beta1.Deployment:
+		app = &appsv1.Deployment{
+			TypeMeta:   typeMeta,
+			ObjectMeta: objectMeta,
+			Spec: appsv1.DeploymentSpec{
+				Selector: labelSelector,
+				Template: podTemplate,
+			},
+		}
+	case v1beta1.DaemonSet:
+		app = &appsv1.DaemonSet{
+			TypeMeta:   typeMeta,
+			ObjectMeta: objectMeta,
+			Spec: appsv1.DaemonSetSpec{
+				Selector: labelSelector,
+				Template: podTemplate,
+			},
+		}
+	default:
+		return nil, nil
+	}
+	err := ctrl.SetControllerReference(manager, app, r.Scheme)
+	return app, err
 }
 
 func (r *ManagerReconciler) desiredService(manager *v1beta1.Manager) (*corev1.Service, error) {

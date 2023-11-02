@@ -34,6 +34,13 @@ type DeployConfig struct {
 	MemoryLimit      string                        `json:"memLimit,omitempty"`
 }
 
+type DeployType string
+
+const (
+	Deployment DeployType = "Deployment"
+	DaemonSet  DeployType = "DaemonSet"
+)
+
 type DeployPhase string
 
 const (
@@ -51,8 +58,9 @@ type IngressConfig struct {
 
 // ManagerSpec defines the desired state of Manager
 type ManagerSpec struct {
-	Deploy  DeployConfig  `json:"deploy,omitempty"`
-	Ingress IngressConfig `json:"ingress,omitempty"`
+	DeployType DeployType    `json:"deployType,omitempty"`
+	Deploy     DeployConfig  `json:"deploy,omitempty"`
+	Ingress    IngressConfig `json:"ingress,omitempty"`
 }
 
 // ManagerStatus defines the observed state of Manager

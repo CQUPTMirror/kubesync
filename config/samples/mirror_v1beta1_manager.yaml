@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/created-by: kubesync
   name: manager-sample
 spec:
+#  deployType:  # Default Deployment, can set to DaemonSet, optional
   deploy:
     image: ghcr.io/cquptmirror/manager:dev  # Default use controller config, optional
     imagePullPolicy: Always  # Optional
