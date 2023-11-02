@@ -375,7 +375,6 @@ func (m *Manager) listJob(c *gin.Context) {
 		case v1beta1.Git:
 			w.Upstream = v.Spec.Config.Upstream
 			w.Status = v1beta1.Created
-			w.Type = v1beta1.Mirror
 		case "":
 			w.Type = v1beta1.Mirror
 		}
