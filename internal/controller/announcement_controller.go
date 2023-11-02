@@ -71,10 +71,6 @@ func (r *AnnouncementReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			UpdateFunc: func(e event.UpdateEvent) bool {
 				oldGeneration := e.ObjectOld.GetGeneration()
 				newGeneration := e.ObjectNew.GetGeneration()
-				// Generation is only updated on spec changes (also on deletion),
-				// not metadata or status
-				// Filter out events where the generation hasn't changed to
-				// avoid being triggered by status updates
 				return oldGeneration != newGeneration
 			},
 		}).
