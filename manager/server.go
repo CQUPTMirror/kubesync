@@ -33,6 +33,7 @@ import (
 
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
+	"github.com/CQUPTMirror/kubesync/manager/external"
 	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -359,26 +360,31 @@ func (m *Manager) listJob(c *gin.Context) {
 	err := m.client.List(c.Request.Context(), jobs)
 
 	for _, v := range jobs.Items {
-		w := internal.MirrorStatus{
-			ID:        v.Name,
-			Alias:     v.Spec.Config.Alias,
-			Desc:      v.Spec.Config.Desc,
-			Url:       v.Spec.Config.Url,
-			HelpUrl:   v.Spec.Config.HelpUrl,
-			Type:      v.Spec.Config.Type,
-			JobStatus: v.Status,
+		if v.Spec.Config.Type == v1beta1.External {
+			wss, _ := external.Provider(&v.Spec.Config, m.httpClient).List()
+			ws = append(ws, wss...)
+		} else {
+			w := internal.MirrorStatus{
+				ID:        v.Name,
+				Alias:     v.Spec.Config.Alias,
+				Desc:      v.Spec.Config.Desc,
+				Url:       v.Spec.Config.Url,
+				HelpUrl:   v.Spec.Config.HelpUrl,
+				Type:      v.Spec.Config.Type,
+				JobStatus: v.Status,
+			}
+			switch v.Spec.Config.Type {
+			case v1beta1.Proxy:
+				w.Upstream = v.Spec.Config.Upstream
+				w.Status = v1beta1.Cached
+			case v1beta1.Git:
+				w.Upstream = v.Spec.Config.Upstream
+				w.Status = v1beta1.Created
+			case "":
+				w.Type = v1beta1.Mirror
+			}
+			ws = append(ws, w)
 		}
-		switch v.Spec.Config.Type {
-		case v1beta1.Proxy:
-			w.Upstream = v.Spec.Config.Upstream
-			w.Status = v1beta1.Cached
-		case v1beta1.Git:
-			w.Upstream = v.Spec.Config.Upstream
-			w.Status = v1beta1.Created
-		case "":
-			w.Type = v1beta1.Mirror
-		}
-		ws = append(ws, w)
 	}
 
 	sort.Slice(ws, func(i, j int) bool {

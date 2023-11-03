@@ -25,9 +25,10 @@ import (
 type MirrorType string
 
 const (
-	Mirror MirrorType = "mirror"
-	Proxy  MirrorType = "proxy"
-	Git    MirrorType = "git"
+	Mirror   MirrorType = "mirror"
+	Proxy    MirrorType = "proxy"
+	Git      MirrorType = "git"
+	External MirrorType = "external"
 )
 
 type JobConfig struct {

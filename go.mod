@@ -13,6 +13,7 @@ require (
 	github.com/onsi/gomega v1.24.1
 	github.com/pkg/profile v1.7.0
 	github.com/urfave/cli v1.22.14
+	github.com/xhit/go-str2duration/v2 v2.1.0
 	golang.org/x/sys v0.12.0
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473
 	k8s.io/api v0.26.1
