@@ -1,5 +1,5 @@
 # Build the manager binary
-FROM golang:1.21 as builder
+FROM --platform=$BUILDPLATFORM golang:1.21 as builder
 ARG TARGETOS
 ARG TARGETARCH
 
@@ -23,7 +23,7 @@ COPY internal/types.go internal/types.go
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o main worker/cmd/main.go
 
-FROM debian:12-slim
+FROM --platform=$TARGETPLATFORM debian:12-slim
 RUN apt update && apt install -y --no-install-recommends rsync curl wget ca-certificates python3-pip python3-requests && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /workspace/main /usr/bin
 COPY worker/utils/reporter /usr/bin/reporter
