@@ -45,7 +45,7 @@ type mirrorProvider interface {
 	WorkingDir() string
 	LogDir() string
 	LogFile() string
-	DataSize() string
+	DataSize() uint64
 
 	// enter context
 	EnterContext() *Context

@@ -105,7 +105,7 @@ type JobStatus struct {
 	LastEnded    int64      `json:"lastEnded"`
 	Scheduled    int64      `json:"nextSchedule"`
 	Upstream     string     `json:"upstream"`
-	Size         string     `json:"size"`
+	Size         uint64     `json:"size"`
 	ErrorMsg     string     `json:"errorMsg"`
 	LastOnline   int64      `json:"lastOnline"`
 	LastRegister int64      `json:"lastRegister"`

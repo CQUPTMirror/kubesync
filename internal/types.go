@@ -3,8 +3,19 @@ package internal
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
+)
+
+const (
+	B = 1
+	K = 1024 * B
+	M = 1024 * K
+	G = 1024 * M
+	T = 1024 * G
 )
 
 type AnnouncementInfo struct {
@@ -37,6 +48,7 @@ type MirrorStatus struct {
 	Url     string             `json:"url"`
 	HelpUrl string             `json:"helpUrl"`
 	Type    v1beta1.MirrorType `json:"type"`
+	SizeStr string             `json:"sizeStr"`
 
 	v1beta1.JobStatus
 }
@@ -110,4 +122,62 @@ func (s *CmdVerb) UnmarshalJSON(b []byte) error {
 type ClientCmd struct {
 	Cmd   CmdVerb `json:"cmd"`
 	Force bool    `json:"force"`
+}
+
+func ParseSize(size uint64) (sizeStr string) {
+	switch {
+	case size > T:
+		sizeStr = fmt.Sprintf("%.2fT", float64(size)/float64(T))
+	case size > G:
+		sizeStr = fmt.Sprintf("%.2fG", float64(size)/float64(G))
+	case size > M:
+		sizeStr = fmt.Sprintf("%.2fM", float64(size)/float64(M))
+	case size > K:
+		sizeStr = fmt.Sprintf("%.2fK", float64(size)/float64(K))
+	default:
+		sizeStr = fmt.Sprintf("%dB", size)
+	}
+	return
+}
+
+func ParseSizeStr(sizeStr string) (size uint64) {
+	if len(sizeStr) > 0 && sizeStr != "unknown" {
+		isBit := false
+		sizeStr = strings.ReplaceAll(sizeStr, " ", "")
+		sizeStr = strings.ReplaceAll(sizeStr, "\n", "")
+		if strings.HasSuffix(sizeStr, "b") {
+			isBit = true
+			sizeStr = strings.TrimSuffix(sizeStr, "b")
+		} else {
+			sizeStr = strings.TrimSuffix(sizeStr, "B")
+		}
+		sizeStr = strings.TrimSuffix(sizeStr, "i")
+		sizeStr = strings.ToUpper(sizeStr)
+		if len(sizeStr) > 0 {
+			sizeRaw, err := strconv.ParseFloat(sizeStr[:len(sizeStr)-1], 64)
+			if err != nil {
+				return
+			}
+			switch sizeStr[len(sizeStr)-1] {
+			case 'T':
+				sizeRaw *= T
+			case 'G':
+				sizeRaw *= G
+			case 'M':
+				sizeRaw *= M
+			case 'K':
+				sizeRaw *= K
+			default:
+				if sizeRaw, err = strconv.ParseFloat(sizeStr, 64); err != nil {
+					return
+				}
+			}
+			if isBit {
+				size = uint64(sizeRaw / 8)
+			} else {
+				size = uint64(sizeRaw)
+			}
+		}
+	}
+	return
 }

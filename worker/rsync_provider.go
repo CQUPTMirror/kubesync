@@ -27,7 +27,7 @@ type rsyncProvider struct {
 	baseProvider
 	rsyncConfig
 	options  []string
-	dataSize string
+	dataSize uint64
 }
 
 func newRsyncProvider(c rsyncConfig) (*rsyncProvider, error) {
@@ -96,12 +96,12 @@ func (p *rsyncProvider) Upstream() string {
 	return p.upstreamURL
 }
 
-func (p *rsyncProvider) DataSize() string {
+func (p *rsyncProvider) DataSize() uint64 {
 	return p.dataSize
 }
 
 func (p *rsyncProvider) Run(started chan empty) error {
-	p.dataSize = ""
+	p.dataSize = 0
 	defer p.closeLogFile()
 	if err := p.Start(); err != nil {
 		return err

@@ -51,7 +51,7 @@ type mirrorJob struct {
 	ctrlChan chan ctrlAction
 	disabled chan empty
 	state    uint32
-	size     string
+	size     uint64
 }
 
 func newMirrorJob(provider mirrorProvider) *mirrorJob {

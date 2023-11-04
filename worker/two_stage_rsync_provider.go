@@ -28,7 +28,7 @@ type twoStageRsyncProvider struct {
 	twoStageRsyncConfig
 	stage1Options []string
 	stage2Options []string
-	dataSize      string
+	dataSize      uint64
 }
 
 // ref: https://salsa.debian.org/mirror-team/archvsync/-/blob/master/bin/ftpsync#L431
@@ -86,7 +86,7 @@ func (p *twoStageRsyncProvider) Upstream() string {
 	return p.upstreamURL
 }
 
-func (p *twoStageRsyncProvider) DataSize() string {
+func (p *twoStageRsyncProvider) DataSize() uint64 {
 	return p.dataSize
 }
 
@@ -140,7 +140,7 @@ func (p *twoStageRsyncProvider) Run(started chan empty) error {
 		return errors.New("provider is currently running")
 	}
 
-	p.dataSize = ""
+	p.dataSize = 0
 	stages := []int{1, 2}
 	for _, stage := range stages {
 		command := []string{p.rsyncCmd}

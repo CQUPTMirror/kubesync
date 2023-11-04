@@ -266,14 +266,7 @@ func (w *Worker) registerWorker() {
 
 func (w *Worker) updateStatus(job *mirrorJob, jobMsg jobMessage) {
 	p := job.provider
-	smsg := v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: "unknown", ErrorMsg: jobMsg.msg}
-
-	// Certain Providers (rsync for example) may know the size of mirror,
-	// so we report it to Manager here
-	if len(job.size) != 0 {
-		smsg.Size = job.size
-	}
-
+	smsg := v1beta1.JobStatus{Status: jobMsg.status, Upstream: p.Upstream(), Size: job.size, ErrorMsg: jobMsg.msg}
 	url := fmt.Sprintf(
 		"%s/job/%s", w.cfg.APIBase, w.Name(),
 	)

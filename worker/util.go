@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/CQUPTMirror/kubesync/internal"
 	"io"
 	"net/http"
 	"os"
@@ -16,14 +17,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-)
-
-const (
-	B = 1
-	K = 1024 * B
-	M = 1024 * K
-	G = 1024 * M
-	T = 1024 * G
 )
 
 var rsyncExitValues = map[int]string{
@@ -118,24 +111,24 @@ func FindAllSubmatchInFile(fileName string, re *regexp.Regexp) (matches [][][]by
 }
 
 // ExtractSizeFromLog uses a regexp to extract the size from log files
-func ExtractSizeFromLog(logFile string, re *regexp.Regexp) string {
+func ExtractSizeFromLog(logFile string, re *regexp.Regexp) uint64 {
 	matches, _ := FindAllSubmatchInFile(logFile, re)
 	if matches == nil || len(matches) == 0 {
-		return ""
+		return 0
 	}
 	// return the first capture group of the last occurrence
-	return string(matches[len(matches)-1][1])
+	return internal.ParseSizeStr(string(matches[len(matches)-1][1]))
 }
 
 // ExtractSizeFromRsyncLog extracts the size from rsync logs
-func ExtractSizeFromRsyncLog(logFile string) string {
+func ExtractSizeFromRsyncLog(logFile string) uint64 {
 	// (?m) flag enables multi-line mode
 	re := regexp.MustCompile(`(?m)^Total file size: ([0-9\.]+[KMGTP]?) bytes`)
 	return ExtractSizeFromLog(logFile, re)
 }
 
 // ExtractSizeFromWalk extracts the size from path
-func ExtractSizeFromWalk(path string) (size string) {
+func ExtractSizeFromWalk(path string) uint64 {
 	sizes := make(chan int64)
 	readSize := func(path string, file os.FileInfo, err error) error {
 		if err != nil || file == nil {
@@ -157,44 +150,18 @@ func ExtractSizeFromWalk(path string) (size string) {
 		used += s
 	}
 
-	switch {
-	case used > T:
-		size = fmt.Sprintf("%.2fT", float64(used)/float64(T))
-	case used > G:
-		size = fmt.Sprintf("%.2fG", float64(used)/float64(G))
-	case used > M:
-		size = fmt.Sprintf("%.2fM", float64(used)/float64(M))
-	case used > K:
-		size = fmt.Sprintf("%.2fK", float64(used)/float64(K))
-	default:
-		size = fmt.Sprintf("%dB", used)
-	}
-
-	return
+	return uint64(used)
 }
 
 // ExtractSizeFromFileSystem extracts the size from filesystem
-func ExtractSizeFromFileSystem(path string) (size string) {
+func ExtractSizeFromFileSystem(path string) uint64 {
 	fs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &fs)
 	if err != nil {
-		return
-	}
-	used := float64(fs.Blocks*uint64(fs.Bsize) - fs.Bfree*uint64(fs.Bsize))
-	switch {
-	case used > T:
-		size = fmt.Sprintf("%.2fT", used/float64(T))
-	case used > G:
-		size = fmt.Sprintf("%.2fG", used/float64(G))
-	case used > M:
-		size = fmt.Sprintf("%.2fM", used/float64(M))
-	case used > K:
-		size = fmt.Sprintf("%.2fK", used/float64(K))
-	default:
-		size = fmt.Sprintf("%.2fB", used)
+		return 0
 	}
 
-	return
+	return (fs.Blocks - fs.Bfree) * uint64(fs.Bsize)
 }
 
 // TranslateRsyncErrorCode translates the exit code of rsync to a message

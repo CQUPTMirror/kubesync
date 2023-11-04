@@ -3,7 +3,6 @@ package external
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
 	str2duration "github.com/xhit/go-str2duration/v2"
@@ -13,21 +12,13 @@ import (
 	"time"
 )
 
-const (
-	B = 1
-	K = 1024 * B
-	M = 1024 * K
-	G = 1024 * M
-	T = 1024 * G
-)
-
 type giteaRepo struct {
 	ID          int    `json:"id"`
 	Name        string `json:"name"`
 	FullName    string `json:"full_name"`
 	Desc        string `json:"description,omitempty"`
 	Empty       bool   `json:"empty,omitempty"`
-	Size        int    `json:"size,omitempty"`
+	Size        uint64 `json:"size,omitempty"`
 	CloneUrl    string `json:"clone_url,omitempty"`
 	OriginalUrl string `json:"original_url,omitempty"`
 	Interval    string `json:"mirror_interval,omitempty"`
@@ -48,23 +39,6 @@ func (r *giteaRepo) getTime() *time.Time {
 		return nil
 	}
 	return &t
-}
-
-func (r *giteaRepo) getSize() string {
-	size := ""
-	switch {
-	case r.Size > T:
-		size = fmt.Sprintf("%.2fT", float64(r.Size)/float64(T))
-	case r.Size > G:
-		size = fmt.Sprintf("%.2fG", float64(r.Size)/float64(G))
-	case r.Size > M:
-		size = fmt.Sprintf("%.2fM", float64(r.Size)/float64(M))
-	case r.Size > K:
-		size = fmt.Sprintf("%.2fK", float64(r.Size)/float64(K))
-	default:
-		size = fmt.Sprintf("%dB", r.Size)
-	}
-	return size
 }
 
 type giteaMsg struct {
@@ -111,17 +85,18 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 		t := v.getTime()
 		i, _ := str2duration.ParseDuration(v.Interval)
 		ws = append(ws, internal.MirrorStatus{
-			ID:    v.FullName,
-			Alias: v.Name,
-			Desc:  v.Desc,
-			Url:   v.CloneUrl,
-			Type:  "git",
+			ID:      v.FullName,
+			Alias:   v.Name,
+			Desc:    v.Desc,
+			Url:     v.CloneUrl,
+			Type:    "git",
+			SizeStr: internal.ParseSize(v.Size * internal.K),
 			JobStatus: v1beta1.JobStatus{
 				Status:     v.getStatus(),
 				LastUpdate: t.Unix(),
 				Scheduled:  t.Add(i).Unix(),
 				Upstream:   v.OriginalUrl,
-				Size:       v.getSize(),
+				Size:       v.Size * internal.K,
 			},
 		})
 	}

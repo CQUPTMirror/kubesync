@@ -164,6 +164,6 @@ func (p *baseProvider) Terminate() error {
 	return err
 }
 
-func (p *baseProvider) DataSize() string {
-	return ""
+func (p *baseProvider) DataSize() uint64 {
+	return 0
 }

@@ -583,8 +583,8 @@ func (m *Manager) updateJob(c *gin.Context) {
 	}
 
 	// Only message with meaningful size updates the mirror size
-	if len(curJob.Status.Size) > 0 && curJob.Status.Size != "unknown" {
-		if len(status.Size) == 0 || status.Size == "unknown" {
+	if curJob.Status.Size > 0 {
+		if status.Size == 0 {
 			status.Size = curJob.Status.Size
 		}
 	}
@@ -613,7 +613,7 @@ func (m *Manager) updateJob(c *gin.Context) {
 func (m *Manager) updateMirrorSize(c *gin.Context) {
 	mirrorID := c.Param("id")
 	type SizeMsg struct {
-		Size string `json:"size"`
+		Size uint64 `json:"size"`
 	}
 	var msg SizeMsg
 	c.BindJSON(&msg)
@@ -628,12 +628,8 @@ func (m *Manager) updateMirrorSize(c *gin.Context) {
 		return
 	}
 
-	// Only message with meaningful size updates the mirror size
-	if len(msg.Size) > 0 || msg.Size != "unknown" {
-		job.Status.Size = msg.Size
-	}
-
-	runLog.Info(fmt.Sprintf("Mirror size of [%s]: %s", mirrorID, job.Status.Size))
+	job.Status.Size = msg.Size
+	runLog.Info(fmt.Sprintf("Mirror size of [%s]: %d", mirrorID, job.Status.Size))
 
 	job.Status.LastOnline = time.Now().Unix()
 	err = m.client.Status().Update(c.Request.Context(), job)

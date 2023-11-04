@@ -24,7 +24,7 @@ type cmdProvider struct {
 	baseProvider
 	cmdConfig
 	command     []string
-	dataSize    string
+	dataSize    uint64
 	failOnMatch *regexp.Regexp
 	sizePattern *regexp.Regexp
 }
@@ -78,12 +78,12 @@ func (p *cmdProvider) Upstream() string {
 	return p.upstreamURL
 }
 
-func (p *cmdProvider) DataSize() string {
+func (p *cmdProvider) DataSize() uint64 {
 	return p.dataSize
 }
 
 func (p *cmdProvider) Run(started chan empty) error {
-	p.dataSize = ""
+	p.dataSize = 0
 	defer p.closeLogFile()
 	if err := p.Start(); err != nil {
 		return err
