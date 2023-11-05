@@ -631,7 +631,6 @@ func (m *Manager) updateMirrorSize(c *gin.Context) {
 	job.Status.Size = msg.Size
 	runLog.Info(fmt.Sprintf("Mirror size of [%s]: %d", mirrorID, job.Status.Size))
 
-	job.Status.LastOnline = time.Now().Unix()
 	err = m.client.Status().Update(c.Request.Context(), job)
 	if err != nil {
 		err := fmt.Errorf("failed to update job %s: %s",
