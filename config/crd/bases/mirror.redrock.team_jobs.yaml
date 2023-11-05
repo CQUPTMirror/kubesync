@@ -1088,7 +1088,8 @@ spec:
                 format: int64
                 type: integer
               size:
-                type: string
+                format: int64
+                type: integer
               status:
                 type: string
               upstream:
