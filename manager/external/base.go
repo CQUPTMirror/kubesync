@@ -8,10 +8,6 @@ import (
 
 type External interface {
 	List() ([]internal.MirrorStatus, error)
-	// TODO: Add API support to manage external jobs
-	//Get(id string) (v1beta1.JobStatus, error)
-	//Delete(id string) error
-	//Create(id string) error
 }
 
 func Provider(cfg *v1beta1.JobConfig, hc *http.Client) External {

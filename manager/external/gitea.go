@@ -5,7 +5,7 @@ import (
 	"errors"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
-	str2duration "github.com/xhit/go-str2duration/v2"
+	"github.com/xhit/go-str2duration/v2"
 	"io"
 	"net/http"
 	"net/url"

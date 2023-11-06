@@ -371,6 +371,7 @@ func (m *Manager) listJob(c *gin.Context) {
 				Url:       v.Spec.Config.Url,
 				HelpUrl:   v.Spec.Config.HelpUrl,
 				Type:      v.Spec.Config.Type,
+				SizeStr:   internal.ParseSize(v.Status.Size),
 				JobStatus: v.Status,
 			}
 			switch v.Spec.Config.Type {
