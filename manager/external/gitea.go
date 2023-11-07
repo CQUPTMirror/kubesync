@@ -85,8 +85,7 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 		t := v.getTime()
 		i, _ := str2duration.ParseDuration(v.Interval)
 		ws = append(ws, internal.MirrorStatus{
-			ID:      v.FullName,
-			Alias:   v.Name,
+			ID:      v.Name,
 			Desc:    v.Desc,
 			Url:     v.CloneUrl,
 			Type:    "git",

@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -389,7 +390,7 @@ func (m *Manager) listJob(c *gin.Context) {
 	}
 
 	sort.Slice(ws, func(i, j int) bool {
-		return ws[i].ID < ws[j].ID
+		return strings.ToLower(ws[i].ID) < strings.ToLower(ws[j].ID)
 	})
 
 	if err != nil {
