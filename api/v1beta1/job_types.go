@@ -32,30 +32,30 @@ const (
 )
 
 type JobConfig struct {
-	Alias         string     `json:"alias,omitempty"`
-	Desc          string     `json:"desc,omitempty"`
-	Url           string     `json:"url,omitempty"`
-	HelpUrl       string     `json:"helpUrl,omitempty"`
-	Type          MirrorType `json:"type,omitempty"`
-	Upstream      string     `json:"upstream"`
-	Provider      string     `json:"provider,omitempty"`
-	MirrorPath    string     `json:"mirrorPath,omitempty"`
-	Command       string     `json:"command,omitempty"`
-	Concurrent    int        `json:"concurrent,omitempty"`
-	Interval      int        `json:"interval,omitempty"`
-	Retry         int        `json:"retry,omitempty"`
-	Timeout       int        `json:"timeout,omitempty"`
-	FailOnMatch   string     `json:"failOnMatch,omitempty"`
-	IPv6Only      string     `json:"IPv6Only,omitempty"`
-	IPv4Only      string     `json:"IPv4Only,omitempty"`
-	ExcludeFile   string     `json:"excludeFile,omitempty"`
-	RsyncOptions  string     `json:"rsyncOptions,omitempty"`
-	Stage1Profile string     `json:"stage1Profile,omitempty"`
-	ExecOnSuccess string     `json:"execOnSuccess,omitempty"`
-	ExecOnFailure string     `json:"execOnFailure,omitempty"`
-	SizePattern   string     `json:"sizePattern,omitempty"`
-	AdditionEnvs  string     `json:"additionEnvs,omitempty"`
-	Debug         string     `json:"debug,omitempty"`
+	Alias         string          `json:"alias,omitempty"`
+	Desc          string          `json:"desc,omitempty"`
+	Url           string          `json:"url,omitempty"`
+	HelpUrl       string          `json:"helpUrl,omitempty"`
+	Type          MirrorType      `json:"type,omitempty"`
+	Upstream      string          `json:"upstream"`
+	Provider      string          `json:"provider,omitempty"`
+	MirrorPath    string          `json:"mirrorPath,omitempty"`
+	Command       string          `json:"command,omitempty"`
+	Concurrent    int             `json:"concurrent,omitempty"`
+	Interval      int             `json:"interval,omitempty"`
+	Retry         int             `json:"retry,omitempty"`
+	Timeout       int             `json:"timeout,omitempty"`
+	FailOnMatch   string          `json:"failOnMatch,omitempty"`
+	IPv6Only      string          `json:"IPv6Only,omitempty"`
+	IPv4Only      string          `json:"IPv4Only,omitempty"`
+	ExcludeFile   string          `json:"excludeFile,omitempty"`
+	RsyncOptions  string          `json:"rsyncOptions,omitempty"`
+	Stage1Profile string          `json:"stage1Profile,omitempty"`
+	ExecOnSuccess string          `json:"execOnSuccess,omitempty"`
+	ExecOnFailure string          `json:"execOnFailure,omitempty"`
+	SizePattern   string          `json:"sizePattern,omitempty"`
+	AdditionEnvs  []corev1.EnvVar `json:"additionEnvs,omitempty"`
+	Debug         string          `json:"debug,omitempty"`
 }
 
 type JobDeploy struct {

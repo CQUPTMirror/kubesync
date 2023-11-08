@@ -195,14 +195,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
 			{Name: "ADDR", Value: fmt.Sprintf(":%d", ApiPort)},
 		}
-		if job.Spec.Config.AdditionEnvs != "" {
-			for _, item := range strings.Split(job.Spec.Config.AdditionEnvs, ";") {
-				splits := strings.Split(item, "=")
-				if len(splits) == 2 {
-					env = append(env, corev1.EnvVar{Name: splits[0], Value: splits[1]})
-				}
-			}
-		}
+		env = append(env, job.Spec.Config.AdditionEnvs...)
 		if job.Spec.Config.Debug != "" {
 			env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
 		}
