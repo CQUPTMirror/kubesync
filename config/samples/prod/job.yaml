@@ -1,0 +1,860 @@
+apiVersion: v1
+items:
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: almalinux
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: FIND_EXCLUDE
+            value: latest
+        alias: AlmaLinux
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://rsync.repo.almalinux.org/almalinux/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: alpine
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: FIND_PATH
+            value: /data/alpine/latest-stable
+          - name: FIND_EXCLUDE
+            value: rc
+        alias: Alpine
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://rsync.alpinelinux.org/alpine/
+      volume:
+        size: 3Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: anaconda
+      namespace: kubesync
+    spec:
+      config:
+        alias: Anaconda
+        upstream: rsync://mirrors.tuna.tsinghua.edu.cn/anaconda/
+      volume:
+        size: 12Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: aosp-monthly
+      namespace: kubesync
+    spec:
+      config:
+        alias: AOSP Monthly
+        upstream: rsync://mirrors.tuna.tsinghua.edu.cn/aosp-monthly/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: apache
+      namespace: kubesync
+    spec:
+      config:
+        alias: Apache
+        rsyncOptions: --delete-excluded
+        upstream: rsync://rsync.apache.org/apache-dist/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: archlinux
+      namespace: kubesync
+    spec:
+      config:
+        alias: Arch Linux
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://mirrors.ustc.edu.cn/archlinux/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: archlinuxarm
+      namespace: kubesync
+    spec:
+      config:
+        alias: Arch Linux ARM
+        interval: 360
+        upstream: rsync://mirrors.bfsu.edu.cn/archlinuxarm/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: armbian
+      namespace: kubesync
+    spec:
+      config:
+        alias: Armbian
+        interval: 360
+        provider: two-stage-rsync
+        stage1Profile: debian
+        upstream: rsync://rsync.armbian.com/apt/
+      volume:
+        size: 300Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: armbian-dl
+      namespace: kubesync
+    spec:
+      config:
+        alias: Armbian Releases
+        execOnSuccess: reporter
+        upstream: rsync://rsync.armbian.com/dl/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: centos
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: FIND_INCLUDE
+            value: iso
+          - name: FIND_EXCLUDE
+            value: latest
+        alias: CentOS
+        desc: CentOS 软件仓库
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://mirrors.ustc.edu.cn/centos/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: centos-altarch
+      namespace: kubesync
+    spec:
+      config:
+        alias: CentOS Altarch
+        interval: 360
+        upstream: rsync://mirrors.ustc.edu.cn/centos-altarch/
+      volume:
+        size: 300Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: centos-stream
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: FIND_EXCLUDE
+            value: latest
+        alias: Centos Stream
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://mirrors.ustc.edu.cn/centos-stream/
+      volume:
+        size: 2Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: centos-vault
+      namespace: kubesync
+    spec:
+      config:
+        alias: CentOS Vault
+        upstream: rsync://mirrors.bfsu.edu.cn/centos-vault/
+      volume:
+        size: 4Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ctan
+      namespace: kubesync
+    spec:
+      config:
+        alias: CTAN
+        execOnSuccess: reporter
+        upstream: rsync://rsync.dante.ctan.org/CTAN/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: cygwin
+      namespace: kubesync
+    spec:
+      config:
+        alias: Cygwin
+        upstream: rsync://cygwin.com/cygwin-ftp/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: deb-multimedia
+      namespace: kubesync
+    spec:
+      config:
+        alias: Debian Multimedia
+        upstream: rsync://www.deb-multimedia.org/deb/
+      volume:
+        size: 20Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: debian
+      namespace: kubesync
+    spec:
+      config:
+        alias: Debian
+        desc: Debian 软件仓库
+        interval: 360
+        upstream: rsync://mirrors.ustc.edu.cn/debian/
+      volume:
+        size: 2Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: debian-cd
+      namespace: kubesync
+    spec:
+      config:
+        alias: Debian CD
+        desc: Debian 安装镜像
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://cdimage.debian.org/debian-cd/
+      volume:
+        size: 300Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: debian-nonfree
+      namespace: kubesync
+    spec:
+      config:
+        alias: Debian Nonfree
+        rsyncOptions: --exclude;archive
+        upstream: rsync://cdimage.debian.org/cdimage-unofficial/non-free/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: debian-security
+      namespace: kubesync
+    spec:
+      config:
+        alias: Debian Security
+        desc: Debian 安全更新
+        interval: 360
+        upstream: rsync://rsync.security.debian.org/debian-security/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: deepin
+      namespace: kubesync
+    spec:
+      config:
+        alias: Deepin
+        interval: 360
+        upstream: rsync://rsync.deepin.com/deepin/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: deepin-cd
+      namespace: kubesync
+    spec:
+      config:
+        alias: Deepin CD
+        execOnSuccess: reporter
+        upstream: rsync://rsync.deepin.com/releases/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: docker-ce
+      namespace: kubesync
+    spec:
+      config:
+        alias: Docker CE
+        upstream: rsync://mirrors.ustc.edu.cn/docker-ce/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: dockerhub
+      namespace: kubesync
+    spec:
+      config:
+        alias: Docker Hub
+        type: proxy
+        upstream: https://registry-1.docker.io
+        url: https://hub.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: elrepo
+      namespace: kubesync
+    spec:
+      config:
+        alias: ELRepo
+        upstream: rsync://ftp.kddilabs.jp/elrepo/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: entware
+      namespace: kubesync
+    spec:
+      config:
+        alias: Entware
+        command: /entware.sh
+        provider: command
+        upstream: https://bin.entware.net
+        image: cquptmirror/worker:entware
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: epel
+      namespace: kubesync
+    spec:
+      config:
+        alias: EPEL
+        upstream: rsync://fedora-rsync.ftp.pub.2iij.net/fedora-epel/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: external-gitea
+      namespace: kubesync
+    spec:
+      config:
+        provider: gitea
+        type: external
+        upstream: http://git-gitea-http.kubesync-git:3000
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: fdroid
+      namespace: kubesync
+    spec:
+      config:
+        alias: F-Droid
+        upstream: rsync://ftp.lysator.liu.se/pub/fdroid/
+      volume:
+        size: 2Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: fedora
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: FIND_INCLUDE
+            value: iso
+          - name: FIND_EXCLUDE
+            value: latest
+        alias: Fedora
+        execOnSuccess: reporter
+        interval: 360
+        rsyncOptions: --exclude;/development;--exclude;/extras;--exclude;/core
+        upstream: rsync://download-ib01.fedoraproject.org/fedora-enchilada/linux/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: fedora-altarch
+      namespace: kubesync
+    spec:
+      config:
+        alias: Fedora Altarch
+        upstream: rsync://mirrors.ustc.edu.cn/fedora-altarch/
+      volume:
+        size: 50Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: gcr
+      namespace: kubesync
+    spec:
+      config:
+        alias: GCP Artifact Registry
+        type: proxy
+        upstream: https://gcr.io
+        url: https://gcr.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ghcr
+      namespace: kubesync
+    spec:
+      config:
+        alias: GitHub Packages
+        type: proxy
+        upstream: https://ghcr.io
+        url: https://ghcr.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: github-release
+      namespace: kubesync
+    spec:
+      config:
+        additionEnvs:
+          - name: REPOS
+            value: VSCodium/vscodium;openark/orchestrator;git-lfs/git-lfs;git-for-windows/git;prometheus/prometheus;kubernetes/minikube;FreeCAD/FreeCAD;goharbor/harbor;balena-io/etcher;llvm/llvm-project;texstudio-org/texstudio;obsproject/obs-studio;topjohnwu/Magisk;PowerShell/PowerShell;k3s-io/k3s
+        alias: Github Release
+        command: /github-release.py --workers 5
+        interval: 720
+        provider: command
+        sizePattern: Total size is ([0-9\.]+[KMGTP]?)
+        upstream: https://api.github.com/repos/
+        image: cquptmirror/worker:github-release
+      volume:
+        size: 50Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: goproxy
+      namespace: kubesync
+    spec:
+      config:
+        alias: GoProxy
+        type: proxy
+        upstream: https://goproxy.cn
+        url: https://goproxy.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: homebrew-bottles
+      namespace: kubesync
+    spec:
+      config:
+        alias: Homebrew Bottles
+        upstream: rsync://mirrors.tuna.tsinghua.edu.cn/homebrew-bottles/
+      volume:
+        size: 600Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: k8s
+      namespace: kubesync
+    spec:
+      config:
+        alias: Kubernetes Registry
+        type: proxy
+        upstream: https://registry.k8s.io
+        url: https://k8s.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: kali
+      namespace: kubesync
+    spec:
+      config:
+        alias: Kali
+        interval: 360
+        provider: two-stage-rsync
+        stage1Profile: debian
+        upstream: rsync://archive-4.kali.org/kali/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: kali-images
+      namespace: kubesync
+    spec:
+      config:
+        alias: Kali Images
+        upstream: rsync://ftp.nluug.nl/kali-images/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: kde-application
+      namespace: kubesync
+    spec:
+      config:
+        alias: KDE Application
+        upstream: rsync://rsync.kde.org/applicationdata/
+      volume:
+        size: 600Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: kicad
+      namespace: kubesync
+    spec:
+      config:
+        alias: KiCad
+        upstream: rsync://mirrors.bfsu.edu.cn/kicad/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: kubernetes
+      namespace: kubesync
+    spec:
+      config:
+        alias: Kubernetes
+        upstream: rsync://mirrors.tuna.tsinghua.edu.cn/kubernetes/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: llvm-apt
+      namespace: kubesync
+    spec:
+      config:
+        alias: LLVM APT
+        upstream: rsync://mirrors.bfsu.edu.cn/llvm-apt/
+      volume:
+        size: 25Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: manjaro
+      namespace: kubesync
+    spec:
+      config:
+        alias: Manjaro
+        upstream: rsync://mirrors.ocf.berkeley.edu/manjaro/
+      volume:
+        size: 200Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: maven
+      namespace: kubesync
+    spec:
+      config:
+        alias: Maven
+        type: proxy
+        upstream: https://maven.aliyun.com/repository/central
+        url: https://maven.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: nix
+      namespace: kubesync
+    spec:
+      config:
+        alias: Nix
+        upstream: rsync://mirrors.bfsu.edu.cn/nix/
+      volume:
+        size: 20Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: nix-channels
+      namespace: kubesync
+    spec:
+      config:
+        alias: Nix Channels
+        type: proxy
+        upstream: https://mirrors.ustc.edu.cn/nix-channels/
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: nixos-images
+      namespace: kubesync
+    spec:
+      config:
+        alias: NixOS Images
+        upstream: rsync://mirrors.tuna.tsinghua.edu.cn/nixos-images/
+      volume:
+        size: 100Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: npm
+      namespace: kubesync
+    spec:
+      config:
+        alias: NPM
+        type: proxy
+        upstream: https://registry.npmmirror.com
+        url: https://npm.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: nuget
+      namespace: kubesync
+    spec:
+      config:
+        alias: Nuget
+        type: proxy
+        upstream: https://api.nuget.org/v3/index.json
+        url: https://repo.mirrors.cqupt.edu.cn/repository/nuget/index.json
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: nvcr
+      namespace: kubesync
+    spec:
+      config:
+        alias: NVIDIA NGC
+        type: proxy
+        upstream: https://nvcr.io
+        url: https://nvcr.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: openbsd
+      namespace: kubesync
+    spec:
+      config:
+        alias: OpenBSD
+        upstream: rsync://ftp.jaist.ac.jp/pub/OpenBSD/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: openeuler
+      namespace: kubesync
+    spec:
+      config:
+        alias: openEuler
+        upstream: rsync://repo.openeuler.openatom.cn/openeuler/
+      volume:
+        size: 4Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: openmediavault
+      namespace: kubesync
+    spec:
+      config:
+        alias: OpenMediaVault
+        upstream: rsync://mirrors.bfsu.edu.cn/OpenMediaVault/
+      volume:
+        size: 1Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: opensuse
+      namespace: kubesync
+    spec:
+      config:
+        alias: openSUSE
+        execOnSuccess: reporter
+        interval: 360
+        upstream: rsync://mirrors.bfsu.edu.cn/opensuse/
+      volume:
+        size: 3Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: openwrt
+      namespace: kubesync
+    spec:
+      config:
+        alias: OpenWrt
+        upstream: rsync://downloads.openwrt.org/downloads/
+      volume:
+        size: 3Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: postmarketos
+      namespace: kubesync
+    spec:
+      config:
+        alias: postmarketOS
+        upstream: rsync://mirror.postmarketos.org/postmarketos/
+      volume:
+        size: 50Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: postmarketos-images
+      namespace: kubesync
+    spec:
+      config:
+        alias: postmarketOS Images
+        rsyncOptions: --exclude;/index.html
+        upstream: rsync://mirror.postmarketos.org/images/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: proxmox
+      namespace: kubesync
+    spec:
+      config:
+        alias: Proxmox
+        execOnSuccess: reporter
+        upstream: rsync://mirrors.ustc.edu.cn/proxmox/
+      volume:
+        size: 500Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: pypi
+      namespace: kubesync
+    spec:
+      config:
+        alias: PyPI
+        command: /pypi.sh
+        provider: command
+        upstream: https://pypi.org
+        url: https://pypi.mirrors.cqupt.edu.cn
+        image: cquptmirror/worker:bandersnatch
+      volume:
+        size: 15Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: quay
+      namespace: kubesync
+    spec:
+      config:
+        alias: Quay
+        type: proxy
+        upstream: https://quay.io
+        url: https://quay.mirrors.cqupt.edu.cn
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: raspberry-pi-os-images
+      namespace: kubesync
+    spec:
+      config:
+        alias: Raspberry Pi OS
+        upstream: rsync://mirrors.bfsu.edu.cn/raspberry-pi-os-images/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: raspberrypi
+      namespace: kubesync
+    spec:
+      config:
+        alias: Raspberry Pi
+        upstream: rsync://mirrors.bfsu.edu.cn/raspberrypi/
+      volume:
+        size: 500Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: raspbian
+      namespace: kubesync
+    spec:
+      config:
+        alias: Raspbian
+        provider: two-stage-rsync
+        stage1Profile: debian
+        upstream: rsync://archive.raspbian.org/archive/
+      volume:
+        size: 600Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: termux
+      namespace: kubesync
+    spec:
+      config:
+        alias: Termux
+        mirrorPath: /data/termux/apt
+        rsyncOptions: --exclude;/termux-main-21
+        upstream: rsync://packages.termux.dev/termux/
+      volume:
+        size: 50Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ubuntu
+      namespace: kubesync
+    spec:
+      config:
+        alias: Ubuntu
+        interval: 360
+        provider: two-stage-rsync
+        stage1Profile: debian
+        upstream: rsync://archive.ubuntu.com/ubuntu/
+      volume:
+        size: 3Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ubuntu-cdimage
+      namespace: kubesync
+    spec:
+      config:
+        alias: Ubuntu CD
+        execOnSuccess: reporter
+        upstream: rsync://cdimage.ubuntu.com/cdimage/
+      volume:
+        size: 1Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ubuntu-ports
+      namespace: kubesync
+    spec:
+      config:
+        alias: Ubuntu Ports
+        provider: two-stage-rsync
+        stage1Profile: debian
+        upstream: rsync://ports.ubuntu.com/ubuntu-ports/
+      volume:
+        size: 3Ti
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: ubuntu-releases
+      namespace: kubesync
+    spec:
+      config:
+        alias: Ubuntu Releases
+        execOnSuccess: reporter
+        upstream: rsync://rsync.releases.ubuntu.com/releases/
+      volume:
+        size: 50Gi
+  - apiVersion: mirror.redrock.team/v1beta1
+    kind: Job
+    metadata:
+      name: wireshark
+      namespace: kubesync
+    spec:
+      config:
+        alias: Wireshark
+        upstream: rsync://rsync.wireshark.org/wsdl/
+      volume:
+        size: 200Gi
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

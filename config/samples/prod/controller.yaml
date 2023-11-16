@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: controller
+    app.kubernetes.io/created-by: kubesync
+    app.kubernetes.io/instance: controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: kubesync
+  name: controller
+  namespace: kubesync
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: controller
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: controller
+      creationTimestamp: null
+      labels:
+        app: controller
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/os
+                    operator: In
+                    values:
+                      - linux
+      containers:
+        - env:
+            - name: MANAGER_IMAGE
+              value: cquptmirror/manager:dev
+            - name: WORKER_IMAGE
+              value: cquptmirror/worker:dev
+            - name: PULL_POLICY
+              value: Always
+            - name: STORAGE_CLASS
+              value: local-path
+            - name: ACCESS_MODE
+              value: ReadWriteOnce
+            - name: FRONT_IMAGE
+              value: caddy
+            - name: FRONT_CMD
+              value: caddy file-server -r /data -b -v
+            - name: FRONT_HOST
+              value: mirrors.cqupt.edu.cn
+            - name: FRONT_TLS
+            - name: FRONT_CLASS
+              value: traefik
+            - name: FRONT_ANN
+              value: 'traefik.ingress.kubernetes.io/router.entrypoints: web'
+          image: cquptmirror/controller:dev
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: controller
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /readyz
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: 500m
+              memory: 128Mi
+            requests:
+              cpu: 10m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+      serviceAccount: controller-sa
+      serviceAccountName: controller-sa
+      terminationGracePeriodSeconds: 10

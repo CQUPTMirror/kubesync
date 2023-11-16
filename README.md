@@ -2,21 +2,54 @@
 
 ## Getting Started
 
-1. Deploy controller
+### 1. Deploy controller
 
 ```shell
 kubectl apply -k config/default
 ```
 
-2. Deploy test manager and first mirror job
+### 2. Deploy test manager and first mirror job
 
 ```shell
 kubectl apply -k config/samples
 ```
 
-3. Deploy more mirror jobs
+### 3. Deploy more mirror jobs
 
 **For detailed configuration and examples, see the `config` directory**
+
+**You can find most of CQUPTMirror's configuration files in the `config/samples/prod` directory**
+
+## Design
+
+```
+      +-------------------------------------------------------------------------+
+      |                                 API Server                              |
+      +---+--^------------------------------------------------+-^---------------+
+          |  |                                 Resources Info | | Update Status
+          |  |                     +--------------------------+-+---------------------------------------------------------------+
+          |  |                     | Namespace #1             | |                                                               |
+          |  |                     |                          | | Change Resources                                              |
+          |  |                     |                     +----v-+----+                                                          |
+          |  |                     |          +--------->|           +------------------------------------------------+         |
+          |  |                     |   Update |          |  Manager  |                                                |         |
+          |  |                     |   Status | +--------+           +--------------------------------+               |         |
+          |  | Manage              |          | |Control +-----------+                                |               |         |
+   Handle |  | Resources           |          | |Command                                              | Status        | REST    |
+   CRDs   |  | (Deploy/CM/PVC/...) | +--------+-+---------------------------------------------+       | API           | API     |
+(Manager/ |  |                     | | Job #1 | |                                             |       |               |         |
+ Worker/  |  | Update              | | +------+-v-+ +----------------+ +--------------------+ | +-----v-------+ +-----v-------+ |
+Announce/ |  | Deploy              | | |  Worker  | |  Rsync Server  | |  HTTP File Server  | | |  Home Page  | |  Dashboard  | |
+ File)    |  | Status              | | +----------+ +--+-------------+ +-+-------------+----+ | +-----+-------+ +-----+-------+ |
+          |  |                     | |                 |                 |             |      |       |               |         |
+      +---v--+-------+             | +-----------------+-----------------+-------------+------+       |               |         |
+      |  Controller  |             |                   |                 |             |              |               |         |
+      +--------------+             +-------------------+-----------------+-------------+--------------+---------------+---------+
+                                                       |                 | metrics     |              |               |
+                                          +------------v--+    +---------v----+    +---v--------------v---------------v---------+
+                                          |  Rsync Proxy  |    |  Prometheus  |<---+                   Ingress                  |
+                                          +---------------+    +--------------+    +--------------------------------------------+
+```
 
 ## Credits
 

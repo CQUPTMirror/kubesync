@@ -1,0 +1,15 @@
+apiVersion: mirror.redrock.team/v1beta1
+kind: Manager
+metadata:
+  labels:
+    app.kubernetes.io/created-by: kubesync
+    app.kubernetes.io/instance: manager-sample
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: manager
+    app.kubernetes.io/part-of: kubesync
+  name: manager
+  namespace: kubesync
+spec:
+  deploy:
+    imagePullPolicy: Always
+  deployType: DaemonSet

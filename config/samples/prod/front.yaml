@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: front
+  name: front
+  namespace: kubesync
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: front
+  template:
+    metadata:
+      labels:
+        app: front
+    spec:
+      containers:
+        - image: cquptmirror/redlens:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            successThreshold: 1
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 5
+          name: front
+          ports:
+            - containerPort: 80
+              name: front
+              protocol: TCP
+          readinessProbe:
+            failureThreshold: 5
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            tcpSocket:
+              port: 80
+            timeoutSeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: front
+  name: front
+  namespace: kubesync
+spec:
+  internalTrafficPolicy: Cluster
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: front
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: front
+  namespace: kubesync
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: mirrors.cqupt.edu.cn
+      http:
+        paths:
+          - backend:
+              service:
+                name: front
+                port:
+                  name: front
+            path: /
+            pathType: Prefix
