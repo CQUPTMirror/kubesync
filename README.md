@@ -18,7 +18,7 @@ kubectl apply -k config/samples
 
 **For detailed configuration and examples, see the `config` directory**
 
-**You can find most of CQUPTMirror's configuration files in the `config/samples/prod` directory**
+**You can find most of the CQUPT OpenSource Mirror's configuration files in the `docs/examples` directory**
 
 ## Design
 
@@ -50,6 +50,8 @@ Announce/ |  | Deploy              | | |  Worker  | |  Rsync Server  | |  HTTP F
                                           |  Rsync Proxy  |    |  Prometheus  |<---+                   Ingress                  |
                                           +---------------+    +--------------+    +--------------------------------------------+
 ```
+
+For Chinese design documents, see [docs/design.md](https://github.com/CQUPTMirror/kubesync/blob/master/docs/design.md)
 
 ## Credits
 
