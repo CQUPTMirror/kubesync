@@ -3,8 +3,10 @@ package external
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
+	"github.com/CQUPTMirror/kubesync/manager/mirrorz"
 	"github.com/xhit/go-str2duration/v2"
 	"io"
 	"net/http"
@@ -41,6 +43,16 @@ func (r *giteaRepo) getTime() *time.Time {
 	return &t
 }
 
+func (r *giteaRepo) getStatusZ() string {
+	if r.Empty {
+		return "U"
+	} else {
+		t := r.getTime()
+		i, _ := str2duration.ParseDuration(r.Interval)
+		return fmt.Sprintf("S%dX%d", t.Unix(), t.Add(i).Unix())
+	}
+}
+
 type giteaMsg struct {
 	OK   bool        `json:"ok"`
 	Data []giteaRepo `json:"data"`
@@ -51,7 +63,7 @@ type giteaProvider struct {
 	hc  *http.Client
 }
 
-func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
+func (p *giteaProvider) fetch() (*giteaMsg, error) {
 	u, err := url.Parse("/api/v1/repos/search")
 	if err != nil {
 		return nil, err
@@ -76,7 +88,18 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 
 	info := new(giteaMsg)
 	err = json.Unmarshal(body, info)
-	if err != nil || !info.OK {
+	if err != nil {
+		return nil, err
+	}
+	if !info.OK {
+		return nil, errors.New("gitea not ok")
+	}
+	return info, nil
+}
+
+func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
+	info, err := p.fetch()
+	if info == nil || err != nil {
 		return nil, err
 	}
 
@@ -97,6 +120,27 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 				Upstream:   v.OriginalUrl,
 				Size:       v.Size * internal.K,
 			},
+		})
+	}
+
+	return ws, nil
+}
+
+func (p *giteaProvider) ListZ() ([]mirrorz.Mirror, error) {
+	info, err := p.fetch()
+	if info == nil || err != nil {
+		return nil, err
+	}
+
+	var ws []mirrorz.Mirror
+	for _, v := range info.Data {
+		ws = append(ws, mirrorz.Mirror{
+			Cname:    v.Name,
+			Desc:     v.Desc,
+			Url:      v.CloneUrl,
+			Status:   v.getStatusZ(),
+			Upstream: v.OriginalUrl,
+			Size:     internal.ParseSize(v.Size * internal.K),
 		})
 	}
 

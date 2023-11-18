@@ -18,7 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"github.com/CQUPTMirror/kubesync/manager/mirrorz"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -61,11 +63,18 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
+	var mirrorZ *mirrorz.MirrorZ = nil
+	var mirrorInfo mirrorz.MirrorZ
+	if err := json.Unmarshal([]byte(os.Getenv("MIRRORZ")), &mirrorInfo); err == nil {
+		mirrorZ = &mirrorInfo
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := manager.GetTUNASyncManager(ctrl.GetConfigOrDie(), manager.Options{
 		Scheme:  scheme,
 		Address: apiAddr,
+		MirrorZ: mirrorZ,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start api service")

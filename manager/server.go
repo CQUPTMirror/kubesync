@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/CQUPTMirror/kubesync/manager/mirrorz"
 	"io"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
@@ -57,6 +58,7 @@ var (
 type Options struct {
 	Scheme  *runtime.Scheme
 	Address string
+	MirrorZ *mirrorz.MirrorZ
 }
 
 type Manager struct {
@@ -70,6 +72,7 @@ type Manager struct {
 	address    string
 	rwmu       sync.RWMutex
 	namespace  string
+	site       *mirrorz.MirrorZ
 }
 
 func contextErrorLogger(c *gin.Context) {
@@ -126,6 +129,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		cache:      cc,
 		address:    options.Address,
 		namespace:  namespace,
+		site:       options.MirrorZ,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -143,6 +147,10 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	// list jobs, status page
 	s.engine.GET("/jobs", s.listJob)
 	s.engine.GET("/api/mirrors", s.listJob)
+
+	if options.MirrorZ != nil {
+		s.engine.GET("/api/mirrorz.json", s.mirrorZ)
+	}
 
 	// mirrorID should be valid in this route group
 	mirrorValidateGroup := s.engine.Group("/job/:id")
@@ -1059,4 +1067,103 @@ func (m *Manager) deleteFile(c *gin.Context) {
 	}
 	runLog.Info(fmt.Sprintf("File <%s> deleted", fileID))
 	c.JSON(http.StatusOK, gin.H{_infoKey: "deleted"})
+}
+
+func (m *Manager) mirrorZ(c *gin.Context) {
+	mirrorZ := m.site
+
+	files := new(v1beta1.FileList)
+	if err := m.client.List(c.Request.Context(), files); err != nil {
+		for _, v := range files.Items {
+			if len(v.Status.Files) > 0 {
+				distro := v.Spec.Alias
+				if distro == "" {
+					distro = v.Name
+				}
+				var urls []mirrorz.InfoUrl
+				for _, u := range v.Status.Files {
+					urls = append(urls, mirrorz.InfoUrl{Name: u.Name, Url: u.Path})
+				}
+				mirrorZ.Info = append(mirrorZ.Info, mirrorz.Info{Distro: distro, Category: string(v.Spec.Type), Urls: urls})
+			}
+		}
+	}
+
+	jobs := new(v1beta1.JobList)
+	if err := m.client.List(c.Request.Context(), jobs); err != nil {
+		for _, v := range jobs.Items {
+			if v.Spec.Config.Type == v1beta1.External {
+				ws, _ := external.Provider(&v.Spec.Config, m.httpClient).ListZ()
+				mirrorZ.Mirrors = append(mirrorZ.Mirrors, ws...)
+			} else {
+				disabled := false
+				cname := v.Spec.Config.Alias
+				if cname == "" {
+					cname = v.Name
+				}
+				url := v.Spec.Config.Url
+				if url == "" {
+					url = fmt.Sprintf("/%s", v.Name)
+				}
+				status := "U"
+				switch v.Spec.Config.Type {
+				case v1beta1.Proxy:
+					status = "C"
+				default:
+					switch v.Status.Status {
+					case v1beta1.Success:
+						if v.Status.LastUpdate != 0 {
+							status = fmt.Sprintf("S%d", v.Status.LastUpdate)
+						}
+					case v1beta1.PreSyncing:
+						if v.Status.Scheduled != 0 {
+							status = fmt.Sprintf("D%d", v.Status.Scheduled)
+						}
+					case v1beta1.Syncing:
+						if v.Status.LastStarted != 0 {
+							status = fmt.Sprintf("Y%d", v.Status.LastStarted)
+						}
+					case v1beta1.Failed:
+						if v.Status.LastEnded != 0 {
+							status = fmt.Sprintf("F%d", v.Status.LastEnded)
+						}
+					case v1beta1.Paused:
+						if v.Status.LastEnded != 0 {
+							status = fmt.Sprintf("P%d", v.Status.LastEnded)
+						}
+					case v1beta1.Created:
+						if v.Status.LastRegister != 0 {
+							status = fmt.Sprintf("N%d", v.Status.LastRegister)
+						}
+					case v1beta1.Disabled:
+						disabled = true
+					}
+					if status != "U" {
+						if v.Status.Scheduled != 0 {
+							status += fmt.Sprintf("X%d", v.Status.Scheduled)
+						}
+						if v.Status.LastUpdate == 0 && v.Status.LastRegister != 0 {
+							status += fmt.Sprintf("N%d", v.Status.LastRegister)
+						}
+						if v.Status.Status == v1beta1.Syncing || v.Status.Status == v1beta1.Failed {
+							status += fmt.Sprintf("O%d", v.Status.LastUpdate)
+						}
+					}
+				}
+				w := mirrorz.Mirror{
+					Cname:    cname,
+					Desc:     v.Spec.Config.Desc,
+					Url:      url,
+					Status:   status,
+					Help:     v.Spec.Config.HelpUrl,
+					Upstream: v.Spec.Config.Upstream,
+					Size:     internal.ParseSize(v.Status.Size),
+					Disable:  disabled,
+				}
+				mirrorZ.Mirrors = append(mirrorZ.Mirrors, w)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, mirrorZ)
 }
