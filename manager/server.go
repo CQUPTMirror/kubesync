@@ -1146,7 +1146,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 						if v.Status.LastUpdate == 0 && v.Status.LastRegister != 0 {
 							status += fmt.Sprintf("N%d", v.Status.LastRegister)
 						}
-						if v.Status.Status == v1beta1.Syncing || v.Status.Status == v1beta1.Failed {
+						if (v.Status.Status == v1beta1.Syncing || v.Status.Status == v1beta1.Failed) && v.Status.LastUpdate != 0 {
 							status += fmt.Sprintf("O%d", v.Status.LastUpdate)
 						}
 					}
