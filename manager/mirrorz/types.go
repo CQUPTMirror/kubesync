@@ -18,9 +18,9 @@ type MirrorZ struct {
 		Big          string `json:"big,omitempty"`
 		Disable      bool   `json:"disable,omitempty"`
 	} `json:"site"`
-	Info      []Info   `json:"info"`
-	Mirrors   []Mirror `json:"mirrors"`
-	Extension string   `json:"extension,omitempty"`
+	Info      *[]Info   `json:"info"`
+	Mirrors   *[]Mirror `json:"mirrors"`
+	Extension string    `json:"extension,omitempty"`
 	Endpoints []struct {
 		Label   string   `json:"label"`
 		Public  bool     `json:"public"`

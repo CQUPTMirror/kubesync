@@ -1072,6 +1072,8 @@ func (m *Manager) deleteFile(c *gin.Context) {
 
 func (m *Manager) mirrorZ(c *gin.Context) {
 	mirrorZ := m.option.MirrorZ
+	mirrorZ.Info = new([]mirrorz.Info)
+	mirrorZ.Mirrors = new([]mirrorz.Mirror)
 
 	files := new(v1beta1.FileList)
 	if err := m.client.List(c.Request.Context(), files); err == nil {
@@ -1085,7 +1087,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 				for _, u := range v.Status.Files {
 					urls = append(urls, mirrorz.InfoUrl{Name: u.Name, Url: u.Path})
 				}
-				mirrorZ.Info = append(mirrorZ.Info, mirrorz.Info{Distro: distro, Category: string(v.Spec.Type), Urls: urls})
+				*mirrorZ.Info = append(*mirrorZ.Info, mirrorz.Info{Distro: distro, Category: string(v.Spec.Type), Urls: urls})
 			}
 		}
 	}
@@ -1096,7 +1098,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 		for _, v := range jobs.Items {
 			if v.Spec.Config.Type == v1beta1.External {
 				ws, _ := external.Provider(&v.Spec.Config, m.httpClient).ListZ()
-				mirrorZ.Mirrors = append(mirrorZ.Mirrors, ws...)
+				*mirrorZ.Mirrors = append(*mirrorZ.Mirrors, ws...)
 			} else {
 				fullSize += v.Status.Size
 				disabled := false
@@ -1163,7 +1165,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 					Size:     internal.ParseSize(v.Status.Size),
 					Disable:  disabled,
 				}
-				mirrorZ.Mirrors = append(mirrorZ.Mirrors, w)
+				*mirrorZ.Mirrors = append(*mirrorZ.Mirrors, w)
 			}
 		}
 	}
