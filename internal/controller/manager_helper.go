@@ -279,6 +279,7 @@ func (r *ManagerReconciler) desiredIngress(manager *v1beta1.Manager) (*v12.Ingre
 								{Path: "/api/mirrors", PathType: &pathType, Backend: svc},
 								{Path: "/api/news", PathType: &pathType, Backend: svc},
 								{Path: "/api/files", PathType: &pathType, Backend: svc},
+								{Path: "/api/mirrorz.json", PathType: &pathType, Backend: svc},
 							},
 						},
 					},
