@@ -135,7 +135,9 @@ func ParseSize(size uint64) (sizeStr string) {
 	case size > K:
 		sizeStr = fmt.Sprintf("%.2fK", float64(size)/float64(K))
 	default:
-		sizeStr = fmt.Sprintf("%dB", size)
+		if size != 0 {
+			sizeStr = fmt.Sprintf("%dB", size)
+		}
 	}
 	return
 }
