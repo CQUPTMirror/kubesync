@@ -195,6 +195,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 			{Name: "API", Value: fmt.Sprintf("http://%s:3000", manager)},
 			{Name: "ADDR", Value: fmt.Sprintf(":%d", ApiPort)},
 		}
+		env = append(env, job.Spec.Deploy.Env...)
 		env = append(env, job.Spec.Config.AdditionEnvs...)
 		if job.Spec.Config.Debug != "" {
 			env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})

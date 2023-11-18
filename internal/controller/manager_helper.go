@@ -127,6 +127,11 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (metav1.
 	typeMeta := metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: string(deployType)}
 	objectMeta := metav1.ObjectMeta{Name: manager.Name, Namespace: manager.Namespace, Labels: map[string]string{"manager": manager.Name}}
 	labelSelector := &metav1.LabelSelector{MatchLabels: map[string]string{"manager": manager.Name}}
+	env := []corev1.EnvVar{
+		{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
+		{Name: "ADDR", Value: fmt.Sprintf(":%d", ManagerPort)},
+	}
+	env = append(env, manager.Spec.Deploy.Env...)
 	podTemplate := corev1.PodTemplateSpec{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{"manager": manager.Name},
@@ -135,12 +140,9 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (metav1.
 			EnableServiceLinks: &enableServiceLinks,
 			Containers: []corev1.Container{
 				{
-					Name:  manager.Name,
-					Image: manager.Spec.Deploy.Image,
-					Env: []corev1.EnvVar{
-						{Name: "NAMESPACE", ValueFrom: &corev1.EnvVarSource{FieldRef: &corev1.ObjectFieldSelector{FieldPath: "metadata.namespace"}}},
-						{Name: "ADDR", Value: fmt.Sprintf(":%d", ManagerPort)},
-					},
+					Name:           manager.Name,
+					Image:          manager.Spec.Deploy.Image,
+					Env:            env,
 					LivenessProbe:  probe,
 					ReadinessProbe: probe,
 					Ports: []corev1.ContainerPort{

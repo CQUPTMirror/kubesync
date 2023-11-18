@@ -24,7 +24,7 @@ import (
 
 type DeployConfig struct {
 	Image            string                        `json:"image,omitempty"`
-	Env              map[string]string             `json:"env,omitempty"`
+	Env              []corev1.EnvVar               `json:"env,omitempty"`
 	ImagePullPolicy  corev1.PullPolicy             `json:"imagePullPolicy,omitempty"`
 	ImagePullSecrets []corev1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
 	NodeName         string                        `json:"nodeName,omitempty"`
