@@ -59,6 +59,7 @@ type Options struct {
 	Scheme  *runtime.Scheme
 	Address string
 	MirrorZ *mirrorz.MirrorZ
+	Total   string
 }
 
 type Manager struct {
@@ -72,7 +73,7 @@ type Manager struct {
 	address    string
 	rwmu       sync.RWMutex
 	namespace  string
-	site       *mirrorz.MirrorZ
+	option     *Options
 }
 
 func contextErrorLogger(c *gin.Context) {
@@ -129,7 +130,7 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		cache:      cc,
 		address:    options.Address,
 		namespace:  namespace,
-		site:       options.MirrorZ,
+		option:     &options,
 	}
 
 	gin.SetMode(gin.ReleaseMode)
@@ -1070,7 +1071,7 @@ func (m *Manager) deleteFile(c *gin.Context) {
 }
 
 func (m *Manager) mirrorZ(c *gin.Context) {
-	mirrorZ := m.site
+	mirrorZ := m.option.MirrorZ
 
 	files := new(v1beta1.FileList)
 	if err := m.client.List(c.Request.Context(), files); err != nil {
@@ -1089,6 +1090,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 		}
 	}
 
+	var fullSize uint64 = 0
 	jobs := new(v1beta1.JobList)
 	if err := m.client.List(c.Request.Context(), jobs); err != nil {
 		for _, v := range jobs.Items {
@@ -1096,6 +1098,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 				ws, _ := external.Provider(&v.Spec.Config, m.httpClient).ListZ()
 				mirrorZ.Mirrors = append(mirrorZ.Mirrors, ws...)
 			} else {
+				fullSize += v.Status.Size
 				disabled := false
 				cname := v.Spec.Config.Alias
 				if cname == "" {
@@ -1163,6 +1166,11 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 				mirrorZ.Mirrors = append(mirrorZ.Mirrors, w)
 			}
 		}
+	}
+
+	mirrorZ.Site.Disk = internal.ParseSize(fullSize)
+	if m.option.Total != "" {
+		mirrorZ.Site.Disk += "/" + m.option.Total
 	}
 
 	c.JSON(http.StatusOK, mirrorZ)

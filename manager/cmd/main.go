@@ -75,6 +75,7 @@ func main() {
 		Scheme:  scheme,
 		Address: apiAddr,
 		MirrorZ: mirrorZ,
+		Total:   os.Getenv("TOTAL"),
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start api service")
