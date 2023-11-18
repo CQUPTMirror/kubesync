@@ -1074,7 +1074,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 	mirrorZ := m.option.MirrorZ
 
 	files := new(v1beta1.FileList)
-	if err := m.client.List(c.Request.Context(), files); err != nil {
+	if err := m.client.List(c.Request.Context(), files); err == nil {
 		for _, v := range files.Items {
 			if len(v.Status.Files) > 0 {
 				distro := v.Spec.Alias
@@ -1092,7 +1092,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 
 	var fullSize uint64 = 0
 	jobs := new(v1beta1.JobList)
-	if err := m.client.List(c.Request.Context(), jobs); err != nil {
+	if err := m.client.List(c.Request.Context(), jobs); err == nil {
 		for _, v := range jobs.Items {
 			if v.Spec.Config.Type == v1beta1.External {
 				ws, _ := external.Provider(&v.Spec.Config, m.httpClient).ListZ()
