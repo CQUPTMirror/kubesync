@@ -1102,10 +1102,6 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 			} else {
 				fullSize += v.Status.Size
 				disabled := false
-				cname := v.Spec.Config.Alias
-				if cname == "" {
-					cname = v.Name
-				}
 				url := v.Spec.Config.Url
 				if url == "" {
 					url = fmt.Sprintf("/%s", v.Name)
@@ -1156,7 +1152,7 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 					}
 				}
 				w := mirrorz.Mirror{
-					Cname:    cname,
+					Cname:    v.Name,
 					Desc:     v.Spec.Config.Desc,
 					Url:      url,
 					Status:   status,
