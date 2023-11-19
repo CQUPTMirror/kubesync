@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -135,7 +136,7 @@ func (p *giteaProvider) ListZ() ([]mirrorz.Mirror, error) {
 	var ws []mirrorz.Mirror
 	for _, v := range info.Data {
 		ws = append(ws, mirrorz.Mirror{
-			Cname:    v.Name,
+			Cname:    strings.ToLower(v.Name) + ".git",
 			Desc:     v.Desc,
 			Url:      v.CloneUrl,
 			Status:   v.getStatusZ(),
