@@ -842,7 +842,7 @@ func (m *Manager) listAnnouncement(c *gin.Context) {
 	}
 
 	sort.Slice(ws, func(i, j int) bool {
-		return ws[i].ID < ws[j].ID
+		return ws[i].PubTime < ws[j].PubTime
 	})
 
 	if err != nil {
@@ -926,10 +926,12 @@ func (m *Manager) updateFile(c *gin.Context) {
 	c.BindJSON(&nFile)
 
 	var fileInfo []v1beta1.FileInfo
-	if len(nFile.Files) > 0 {
-		for _, v := range nFile.Files {
-			info := internal.Recognizer(v)
+	if nFile.Files != nil && len(nFile.Files) > 0 {
+		for k, v := range nFile.Files {
+			info := internal.Recognizer(k)
 			if info.Name != "" {
+				info.Size = v
+				info.SizeStr = internal.ParseSize(v)
 				fileInfo = append(fileInfo, info)
 			}
 		}
@@ -1009,6 +1011,9 @@ func (m *Manager) listFile(c *gin.Context) {
 
 	for _, v := range files.Items {
 		if len(v.Status.Files) > 0 {
+			sort.Slice(v.Status.Files, func(i, j int) bool {
+				return v.Status.Files[i].Name < v.Status.Files[j].Name
+			})
 			ws = append(ws, internal.FileInfo{ID: v.Name, Type: v.Spec.Type, Alias: v.Spec.Alias, FileStatus: v.Status})
 		}
 	}

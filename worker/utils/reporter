@@ -7,12 +7,12 @@ from urllib.parse import urljoin
 def find(path: str = "/data", ext: list = None, include: str = '', exclude: str = "placeholder") -> list:
     if ext is None:
         ext = [".iso"]
-    find_files = []
+    find_files = {}
     for root, dirs, files in os.walk(path):
         files = [f for f in files if not f[0] == '.']
         dirs[:] = [d for d in dirs if not d[0] == '.']
         if (not include or include in root) and exclude not in root:
-            find_files.extend([os.path.join(root.removeprefix("/data"), i) for i in files if os.path.splitext(i)[-1] in ext and include in i and exclude not in i])
+            find_files.update({os.path.join(root.removeprefix("/data"), i): os.path.getsize(os.path.join(root, i)) for i in files if os.path.splitext(i)[-1] in ext and include in i and exclude not in i})
     return find_files
 
 
@@ -26,9 +26,9 @@ if __name__ == "__main__":
     include = os.getenv("FIND_INCLUDE", "")
     exclude = os.getenv("FIND_EXCLUDE", "placeholder")
     api = os.getenv("API", "http://manager-sample:3000")
-    files = []
+    files = {}
     for i in path:
-        files.extend(find(i, ext, include, exclude))
+        files.update(find(i, ext, include, exclude))
     try:
         req = requests.post(urljoin(api, f"/file/{name}"), json={"files": files})
         req.raise_for_status()

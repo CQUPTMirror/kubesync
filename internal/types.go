@@ -28,9 +28,9 @@ type AnnouncementInfo struct {
 }
 
 type FileBase struct {
-	Type  v1beta1.FileType `json:"type"`
-	Alias string           `json:"alias"`
-	Files []string         `json:"files"`
+	Type  v1beta1.FileType  `json:"type"`
+	Alias string            `json:"alias"`
+	Files map[string]uint64 `json:"files"`
 }
 
 type FileInfo struct {

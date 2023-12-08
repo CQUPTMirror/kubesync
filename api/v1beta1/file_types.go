@@ -38,6 +38,8 @@ type FileInfo struct {
 	EditionType  string `json:"editionType"`
 	Part         int    `json:"part"`
 	Path         string `json:"path"`
+	Size         uint64 `json:"size"`
+	SizeStr      string `json:"sizeStr"`
 }
 
 // FileSpec defines the desired state of File
