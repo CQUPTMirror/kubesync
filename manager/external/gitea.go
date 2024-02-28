@@ -7,7 +7,6 @@ import (
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
 	"github.com/CQUPTMirror/kubesync/internal"
 	"github.com/CQUPTMirror/kubesync/manager/mirrorz"
-	"github.com/xhit/go-str2duration/v2"
 	"io"
 	"net/http"
 	"net/url"
@@ -48,9 +47,7 @@ func (r *giteaRepo) getStatusZ() string {
 	if r.Empty {
 		return "U"
 	} else {
-		t := r.getTime()
-		i, _ := str2duration.ParseDuration(r.Interval)
-		return fmt.Sprintf("S%dX%d", t.Unix(), t.Add(i).Unix())
+		return fmt.Sprintf("S%d", r.getTime().Unix())
 	}
 }
 
@@ -106,8 +103,6 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 
 	var ws []internal.MirrorStatus
 	for _, v := range info.Data {
-		t := v.getTime()
-		i, _ := str2duration.ParseDuration(v.Interval)
 		ws = append(ws, internal.MirrorStatus{
 			ID:      v.Name,
 			Desc:    v.Desc,
@@ -116,8 +111,7 @@ func (p *giteaProvider) List() ([]internal.MirrorStatus, error) {
 			SizeStr: internal.ParseSize(v.Size * internal.K),
 			JobStatus: v1beta1.JobStatus{
 				Status:     v.getStatus(),
-				LastUpdate: t.Unix(),
-				Scheduled:  t.Add(i).Unix(),
+				LastUpdate: v.getTime().Unix(),
 				Upstream:   v.OriginalUrl,
 				Size:       v.Size * internal.K,
 			},
