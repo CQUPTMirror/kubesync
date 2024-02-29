@@ -1176,5 +1176,9 @@ func (m *Manager) mirrorZ(c *gin.Context) {
 		mirrorZ.Site.Disk += "/" + m.option.Total
 	}
 
+	if _, ok := c.GetQuery("pack"); ok {
+		c.JSON(http.StatusOK, []*mirrorz.MirrorZ{mirrorZ})
+		return
+	}
 	c.JSON(http.StatusOK, mirrorZ)
 }
