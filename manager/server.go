@@ -91,12 +91,11 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 		return nil, errors.New("can't get namespace")
 	}
 
-	hc := &http.Client{
-		Transport: &http.Transport{MaxIdleConnsPerHost: 100},
-		Timeout:   5 * time.Second,
+	rhc, err := rest.HTTPClientFor(config)
+	if err != nil {
+		return nil, err
 	}
-
-	mapper, err := apiutil.NewDynamicRESTMapper(config, hc)
+	mapper, err := apiutil.NewDynamicRESTMapper(config, rhc)
 	if err != nil {
 		return nil, err
 	}
@@ -114,6 +113,11 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	}
 
 	nc := client.NewNamespacedClient(c, namespace)
+
+	hc := &http.Client{
+		Transport: &http.Transport{MaxIdleConnsPerHost: 100},
+		Timeout:   5 * time.Second,
+	}
 
 	s := &Manager{
 		httpClient: hc,
