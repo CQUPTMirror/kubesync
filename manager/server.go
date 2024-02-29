@@ -63,7 +63,6 @@ type Options struct {
 }
 
 type Manager struct {
-	config     *rest.Config
 	engine     *gin.Engine
 	httpClient *http.Client
 	client     client.Client
@@ -72,7 +71,6 @@ type Manager struct {
 	cache      cache.Cache
 	address    string
 	rwmu       sync.RWMutex
-	namespace  string
 	option     *Options
 }
 
@@ -92,44 +90,37 @@ func GetTUNASyncManager(config *rest.Config, options Options) (*Manager, error) 
 	if namespace == "" {
 		return nil, errors.New("can't get namespace")
 	}
-	mapper, err := apiutil.NewDynamicRESTMapper(config)
+
+	hc := &http.Client{
+		Transport: &http.Transport{MaxIdleConnsPerHost: 100},
+		Timeout:   5 * time.Second,
+	}
+
+	mapper, err := apiutil.NewDynamicRESTMapper(config, hc)
 	if err != nil {
 		return nil, err
 	}
 
 	cc, err := cache.New(config, cache.Options{
-		Scheme:    options.Scheme,
-		Mapper:    mapper,
-		Resync:    &defaultRetryPeriod,
-		Namespace: namespace,
+		Scheme:            options.Scheme,
+		Mapper:            mapper,
+		SyncPeriod:        &defaultRetryPeriod,
+		DefaultNamespaces: map[string]cache.Config{namespace: {}},
 	})
+
+	c, err := client.New(config, client.Options{Scheme: options.Scheme, Mapper: mapper, Cache: &client.CacheOptions{Reader: cc}})
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := client.New(config, client.Options{Scheme: options.Scheme, Mapper: mapper})
-	if err != nil {
-		return nil, err
-	}
-
-	cl, err := client.NewDelegatingClient(client.NewDelegatingClientInput{CacheReader: cc, Client: c})
-	if err != nil {
-		return nil, err
-	}
-
-	hc := &http.Client{
-		Transport: &http.Transport{MaxIdleConnsPerHost: 20},
-		Timeout:   5 * time.Second,
-	}
+	nc := client.NewNamespacedClient(c, namespace)
 
 	s := &Manager{
-		config:     config,
 		httpClient: hc,
-		client:     cl,
+		client:     nc,
 		internal:   context.Background(),
 		cache:      cc,
 		address:    options.Address,
-		namespace:  namespace,
 		option:     &options,
 	}
 
@@ -265,7 +256,7 @@ func (m *Manager) Run(ctx context.Context) error {
 
 func (m *Manager) GetJob(c *gin.Context, mirrorID string) (*v1beta1.Job, error) {
 	job := new(v1beta1.Job)
-	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, job)
+	err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: mirrorID}, job)
 	if err != nil {
 		err := fmt.Errorf("failed to get mirror: %s",
 			err.Error(),
@@ -324,11 +315,10 @@ func (m *Manager) createJob(c *gin.Context) {
 			APIVersion: v1beta1.GroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      mirrorID,
-			Namespace: m.namespace,
+			Name: mirrorID,
 		},
 	}
-	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: mirrorID}, ojb); err != nil || ojb == nil {
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: mirrorID}, ojb); err != nil || ojb == nil {
 		var jobSpec v1beta1.JobSpec
 		c.BindJSON(&jobSpec)
 		job.Spec = jobSpec
@@ -767,7 +757,7 @@ func (m *Manager) handleClientCmd(c *gin.Context) {
 
 func (m *Manager) GetAnnouncement(c *gin.Context, announcementID string) (*v1beta1.Announcement, error) {
 	news := new(v1beta1.Announcement)
-	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: announcementID}, news)
+	err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: announcementID}, news)
 	if err != nil {
 		err := fmt.Errorf("failed to get announcement: %s",
 			err.Error(),
@@ -788,9 +778,9 @@ func (m *Manager) createAnnouncement(c *gin.Context) {
 	defer m.rwmu.Unlock()
 	news := v1beta1.Announcement{
 		TypeMeta:   metav1.TypeMeta{Kind: "Announcement", APIVersion: v1beta1.GroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{Name: announcementID, Namespace: m.namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: announcementID},
 	}
-	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: announcementID}, oNews); err != nil || oNews == nil {
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: announcementID}, oNews); err != nil || oNews == nil {
 		var newsSpec v1beta1.AnnouncementSpec
 		c.BindJSON(&newsSpec)
 		news.Spec = newsSpec
@@ -906,7 +896,7 @@ func (m *Manager) deleteAnnouncement(c *gin.Context) {
 
 func (m *Manager) GetFile(c *gin.Context, fileID string) (*v1beta1.File, error) {
 	file := new(v1beta1.File)
-	err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, file)
+	err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: fileID}, file)
 	if err != nil {
 		err := fmt.Errorf("failed to get file: %s",
 			err.Error(),
@@ -941,12 +931,12 @@ func (m *Manager) updateFile(c *gin.Context) {
 	defer m.rwmu.Unlock()
 	file := v1beta1.File{
 		TypeMeta:   metav1.TypeMeta{Kind: "File", APIVersion: v1beta1.GroupVersion.String()},
-		ObjectMeta: metav1.ObjectMeta{Name: fileID, Namespace: m.namespace},
+		ObjectMeta: metav1.ObjectMeta{Name: fileID},
 		Spec:       v1beta1.FileSpec{Type: nFile.Type, Alias: nFile.Alias},
 		Status:     v1beta1.FileStatus{},
 	}
 
-	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); err != nil || oFile == nil {
+	if err := m.client.Get(c.Request.Context(), client.ObjectKey{Name: fileID}, oFile); err != nil || oFile == nil {
 		if file.Spec.Type == "" {
 			file.Spec.Type = v1beta1.OS
 		}
@@ -971,7 +961,7 @@ func (m *Manager) updateFile(c *gin.Context) {
 			return
 		}
 		if len(fileInfo) > 0 {
-			if e := m.client.Get(c.Request.Context(), client.ObjectKey{Namespace: m.namespace, Name: fileID}, oFile); e != nil {
+			if e := m.client.Get(c.Request.Context(), client.ObjectKey{Name: fileID}, oFile); e != nil {
 				err := fmt.Errorf("failed to get file: %s",
 					e.Error(),
 				)

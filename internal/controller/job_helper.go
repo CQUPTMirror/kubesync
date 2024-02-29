@@ -77,7 +77,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 			Labels:    map[string]string{"job": job.Name},
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
-			Resources: corev1.ResourceRequirements{
+			Resources: corev1.VolumeResourceRequirements{
 				Requests: corev1.ResourceList{corev1.ResourceStorage: resource.MustParse(job.Spec.Volume.Size)},
 			},
 		},
