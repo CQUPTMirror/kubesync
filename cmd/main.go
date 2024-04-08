@@ -109,6 +109,7 @@ func main() {
 		PullSecret:   os.Getenv("PULL_SECRET"),
 		StorageClass: os.Getenv("STORAGE_CLASS"),
 		AccessMode:   os.Getenv("ACCESS_MODE"),
+		FrontMode:    os.Getenv("FRONT_MODE"),
 		FrontImage:   os.Getenv("FRONT_IMAGE"),
 		RsyncImage:   os.Getenv("RSYNC_IMAGE"),
 		FrontCmd:     os.Getenv("FRONT_CMD"),

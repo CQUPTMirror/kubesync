@@ -89,7 +89,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	var ig *v1.Ingress
-	disableFront, _, _, _, _, _ := r.checkRsyncFront(&job)
+	disableFront, _, _, _, _, _, _ := r.checkRsyncFront(&job)
 	if !disableFront {
 		ig, err = r.desiredIngress(&job)
 		if err != nil {

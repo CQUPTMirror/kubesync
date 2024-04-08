@@ -64,8 +64,10 @@ spec:
 #          value:  # Default storageClass of worker pvc
 #        - name: ACCESS_MODE
 #          value: ReadWriteOnce  # Default accessMode of worker pvc
-#        - name: FRONT_IMAGE  # Default image used to deploy the directory service
-#          value: nginx / caddy
+#        - name: FRONT_MODE  # Default server to be used as Front Server, if this is not set, disable front server
+#          value: nginx / caddy / ''
+#        - name: FRONT_IMAGE  # Default images used to deploy front server. Be careful, this value is related with FRONT_MODE, if you use nginx, you must specify a nginx image. If this is not set, both nginx and caddy mode pull from dockerhub.
+#          value: ''
 #        - name: RSYNC_IMAGE  # Default image used to deploy the rsync service
 #          value: rsync
 #        - name: FRONT_CMD  # Default command used to deploy the directory service

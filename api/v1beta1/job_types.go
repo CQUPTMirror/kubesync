@@ -62,6 +62,7 @@ type JobDeploy struct {
 	DeployConfig `json:",inline"`
 
 	DisableFront string `json:"disableFront,omitempty"`
+	FrontMode    string `json:"frontMode,omitempty"`
 	FrontImage   string `json:"frontImage,omitempty"`
 	FrontCmd     string `json:"frontCmd,omitempty"`
 	DisableRsync string `json:"disableRsync,omitempty"`

@@ -40,6 +40,7 @@ type Config struct {
 	PullSecret   string
 	StorageClass string
 	AccessMode   string
+	FrontMode    string
 	FrontImage   string
 	RsyncImage   string
 	FrontCmd     string

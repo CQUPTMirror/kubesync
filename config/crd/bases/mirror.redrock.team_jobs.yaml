@@ -1221,6 +1221,8 @@ spec:
                     type: string
                   frontImage:
                     type: string
+                  frontMode:
+                    type: string
                   image:
                     type: string
                   imagePullPolicy:

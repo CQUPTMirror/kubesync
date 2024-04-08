@@ -38,17 +38,19 @@ const (
 	RsyncPort = 873
 )
 
-func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontCmd, rsyncCmd []string, frontImage, rsyncImage string) {
-	frontImage, rsyncImage = r.Config.FrontImage, r.Config.RsyncImage
+func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontCmd, rsyncCmd []string, frontMode, frontImage, rsyncImage string) {
+	frontMode, frontImage, rsyncImage = r.Config.FrontMode, r.Config.FrontImage, r.Config.RsyncImage
 	frontCmd, rsyncCmd = strings.Split(r.Config.FrontCmd, " "), strings.Split(r.Config.RsyncCmd, " ")
 	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
 		disableFront = s
 	}
-	if job.Spec.Deploy.FrontImage != "" {
-		frontImage = job.Spec.Deploy.FrontImage
+	if job.Spec.Deploy.FrontMode != "" {
+		frontMode = job.Spec.Deploy.FrontMode
 	}
-	if frontImage == "" {
+	if frontMode == "" {
 		disableFront = true
+	} else if frontImage == "" {
+		frontImage = frontMode + ":latest"
 	}
 	if job.Spec.Deploy.FrontCmd != "" {
 		frontCmd = strings.Split(job.Spec.Deploy.FrontCmd, " ")
@@ -245,7 +247,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		}
 	}
 
-	disableFront, disableRsync, frontCmd, rsyncCmd, frontImage, rsyncImage := r.checkRsyncFront(job)
+	disableFront, disableRsync, frontCmd, rsyncCmd, _, frontImage, rsyncImage := r.checkRsyncFront(job)
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
@@ -337,7 +339,7 @@ func (r *JobReconciler) desiredService(job *v1beta1.Job) (*corev1.Service, error
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
-	disableFront, disableRsync, _, _, _, _ := r.checkRsyncFront(job)
+	disableFront, disableRsync, _, _, _, _, _ := r.checkRsyncFront(job)
 	if !disableFront {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "front", Port: FrontPort, Protocol: "TCP", TargetPort: intstr.FromString("front")})
 	}
