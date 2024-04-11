@@ -82,6 +82,8 @@ spec:
 #          value: traefik
 #        - name: FRONT_ANN  # Default ingress annotations used to deploy front services (api, directory), split by ';'
 #          value: "traefik.ingress.kubernetes.io/router.entrypoints: http,https;traefik.ingress.kubernetes.io/router.middlewares: auth@file,default-prefix@kubernetescrd"
+#        - name: DEBUG # Whether to enable worker's debug mode by default.
+#          value: "true"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

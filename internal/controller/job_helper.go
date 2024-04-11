@@ -199,7 +199,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		}
 		env = append(env, job.Spec.Deploy.Env...)
 		env = append(env, job.Spec.Config.AdditionEnvs...)
-		if job.Spec.Config.Debug != "" {
+		if job.Spec.Config.Debug != "" || r.Config.Debug {
 			env = append(env, corev1.EnvVar{Name: "DEBUG", Value: "true"})
 		}
 		probe := &corev1.Probe{

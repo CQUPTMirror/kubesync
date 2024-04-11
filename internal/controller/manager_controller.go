@@ -49,6 +49,7 @@ type Config struct {
 	FrontTLS     string
 	FrontClass   string
 	FrontAnn     map[string]string
+	Debug        bool
 }
 
 // ManagerReconciler reconciles a Manager object

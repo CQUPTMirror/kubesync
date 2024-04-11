@@ -102,6 +102,11 @@ func main() {
 		}
 	}
 
+	debug := false
+	if os.Getenv("DEBUG") != "" {
+		debug = true
+	}
+
 	config := controller.Config{
 		ManagerImage: os.Getenv("MANAGER_IMAGE"),
 		WorkerImage:  os.Getenv("WORKER_IMAGE"),
@@ -118,6 +123,7 @@ func main() {
 		FrontTLS:     os.Getenv("FRONT_TLS"),
 		FrontClass:   os.Getenv("FRONT_CLASS"),
 		FrontAnn:     annItems,
+		Debug:        debug,
 	}
 
 	if err = (&controller.JobReconciler{

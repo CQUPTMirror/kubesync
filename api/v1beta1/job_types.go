@@ -55,7 +55,8 @@ type JobConfig struct {
 	ExecOnFailure string          `json:"execOnFailure,omitempty"`
 	SizePattern   string          `json:"sizePattern,omitempty"`
 	AdditionEnvs  []corev1.EnvVar `json:"additionEnvs,omitempty"`
-	Debug         string          `json:"debug,omitempty"`
+	// Why this is a string? It's a feature! Maybe you can write debug reason here as long as it's not empty. :)
+	Debug string `json:"debug,omitempty"`
 }
 
 type JobDeploy struct {
