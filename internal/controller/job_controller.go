@@ -73,12 +73,29 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		return ctrl.Result{}, nil
 	}
 
+	var (
+		err     error
+		ig      *v1.Ingress
+		frontCM *corev1.ConfigMap
+	)
+	disableFront, _, _, _, _, _, _ := r.checkRsyncFront(&job)
+	if !disableFront {
+		ig, err = r.desiredIngress(&job)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		frontCM, err = r.desiredFrontConfigmap(&job)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
 	pvc, err := r.desiredPersistentVolumeClaim(&job)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	app, err := r.desiredDeployment(&job, managerName)
+	app, err := r.desiredDeployment(&job, managerName, frontCM)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -86,15 +103,6 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	svc, err := r.desiredService(&job)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-
-	var ig *v1.Ingress
-	disableFront, _, _, _, _, _, _ := r.checkRsyncFront(&job)
-	if !disableFront {
-		ig, err = r.desiredIngress(&job)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
 	}
 
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
@@ -120,6 +128,12 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			if err != nil {
 				return ctrl.Result{}, err
 			}
+			if frontCM != nil {
+				err = r.Patch(ctx, frontCM, client.Apply, applyOpts...)
+				if err != nil {
+					return ctrl.Result{}, err
+				}
+			}
 		}
 	} else {
 		deploy := new(appsv1.Deployment)
@@ -134,6 +148,10 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
 			})
 			r.Delete(ctx, deploy)
+			r.Delete(ctx, &corev1.ConfigMap{
+				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: ConfigMapKind},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
 		}
 	}
 

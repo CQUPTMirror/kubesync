@@ -20,6 +20,7 @@ package main
 import (
 	"flag"
 	"os"
+	"reflect"
 	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -91,40 +92,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	annString := os.Getenv("FRONT_ANN")
-	annItems := make(map[string]string)
-	if annString != "" {
-		for _, item := range strings.Split(annString, ";") {
-			splits := strings.Split(item, "=")
-			if len(splits) == 2 {
-				annItems[splits[0]] = splits[1]
-			}
-		}
-	}
-
-	debug := false
-	if os.Getenv("DEBUG") != "" {
-		debug = true
-	}
-
-	config := controller.Config{
-		ManagerImage: os.Getenv("MANAGER_IMAGE"),
-		WorkerImage:  os.Getenv("WORKER_IMAGE"),
-		PullPolicy:   os.Getenv("PULL_POLICY"),
-		PullSecret:   os.Getenv("PULL_SECRET"),
-		StorageClass: os.Getenv("STORAGE_CLASS"),
-		AccessMode:   os.Getenv("ACCESS_MODE"),
-		FrontMode:    os.Getenv("FRONT_MODE"),
-		FrontImage:   os.Getenv("FRONT_IMAGE"),
-		RsyncImage:   os.Getenv("RSYNC_IMAGE"),
-		FrontCmd:     os.Getenv("FRONT_CMD"),
-		RsyncCmd:     os.Getenv("RSYNC_CMD"),
-		FrontHost:    os.Getenv("FRONT_HOST"),
-		FrontTLS:     os.Getenv("FRONT_TLS"),
-		FrontClass:   os.Getenv("FRONT_CLASS"),
-		FrontAnn:     annItems,
-		Debug:        debug,
-	}
+	config := getConfig()
 
 	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
@@ -164,5 +132,146 @@ func main() {
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
+	}
+}
+
+func getConfig() controller.Config {
+	// TODO: replace ugly env way to config file
+	annString := os.Getenv("FRONT_ANN")
+	annItems := make(map[string]string)
+	if annString != "" {
+		for _, item := range strings.Split(annString, ";") {
+			splits := strings.Split(item, "=")
+			if len(splits) == 2 {
+				annItems[splits[0]] = splits[1]
+			}
+		}
+	}
+
+	debug := false
+	if os.Getenv("DEBUG") != "" {
+		debug = true
+	}
+
+	c := controller.Config{
+		ManagerImage: os.Getenv("MANAGER_IMAGE"),
+		WorkerImage:  os.Getenv("WORKER_IMAGE"),
+		PullPolicy:   os.Getenv("PULL_POLICY"),
+		PullSecret:   os.Getenv("PULL_SECRET"),
+		StorageClass: os.Getenv("STORAGE_CLASS"),
+		AccessMode:   os.Getenv("ACCESS_MODE"),
+		FrontMode:    os.Getenv("FRONT_MODE"),
+		FrontImage:   os.Getenv("FRONT_IMAGE"),
+		RsyncImage:   os.Getenv("RSYNC_IMAGE"),
+		FrontCmd:     os.Getenv("FRONT_CMD"),
+		FrontConfig:  os.Getenv("FRONT_CONFIG"),
+		RsyncCmd:     os.Getenv("RSYNC_CMD"),
+		FrontHost:    os.Getenv("FRONT_HOST"),
+		FrontTLS:     os.Getenv("FRONT_TLS"),
+		FrontClass:   os.Getenv("FRONT_CLASS"),
+		FrontAnn:     annItems,
+		Debug:        debug,
+	}
+
+	mergeDefaults(&c)
+
+	return c
+}
+
+// mergeDefaults merges the default values into the given config.
+// only support string and map[string]string.
+func mergeDefaults(config *controller.Config) {
+	defaultConfig := &controller.Config{
+		ManagerImage: "cquptmirror/manager:latest",
+		WorkerImage:  "cquptmirror/worker:latest",
+		FrontMode:    "caddy",
+		RsyncImage:   "",
+		FrontCmd:     "caddy run -c /etc/frontConfig",
+		FrontConfig: `{
+	"apps": {
+        "http": {
+            "servers": {
+                "static": {
+                    "listen": [
+                        ":80"
+                    ],
+                    "read_header_timeout": 10000000000,
+                    "idle_timeout": 30000000000,
+                    "max_header_bytes": 10240,
+                    "routes": [
+                        {
+                            "handle": [
+                                {
+                                    "encodings": {
+                                        "gzip": {
+
+                                        },
+                                        "zstd": {
+
+                                        }
+                                    },
+                                    "handler": "encode",
+                                    "prefer": [
+                                        "zstd",
+                                        "gzip"
+                                    ]
+                                },
+                                {
+                                    "browse": {
+
+                                    },
+                                    "handler": "file_server",
+                                    "root": "/data",
+                                    "index_names": [
+                                        "_noindex"
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "automatic_https": {
+                        "disable": true
+					}
+				}
+			}
+		}
+	}}
+	`,
+		RsyncCmd:   "",
+		FrontHost:  "mirrors.cqupt.edu.cn",
+		FrontTLS:   "",
+		FrontClass: "traefik",
+		FrontAnn: map[string]string{
+			"traefik.ingress.kubernetes.io/router.entrypoints": "web",
+		},
+		Debug: false,
+	}
+
+	// 用反射实现
+	configValue := reflect.ValueOf(config).Elem()
+	defaultConfigValue := reflect.ValueOf(defaultConfig).Elem()
+
+	for i := 0; i < configValue.NumField(); i++ {
+		configField := configValue.Field(i)
+		defaultConfigField := defaultConfigValue.Field(i)
+
+		switch configField.Kind() {
+		case reflect.String:
+			if configField.IsZero() {
+				configField.SetString(defaultConfigField.String())
+			}
+		case reflect.Map:
+			// only support map[string]string
+			if configField.IsZero() {
+				// 新建一个map,防止defaultConfig依然被引用而无法被gc
+				newMap := make(map[string]string)
+				for _, key := range defaultConfigField.MapKeys() {
+					newMap[key.String()] = defaultConfigField.MapIndex(key).String()
+				}
+				configField.Set(reflect.ValueOf(newMap))
+			}
+		default:
+			continue
+		}
 	}
 }
