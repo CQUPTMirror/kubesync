@@ -116,7 +116,7 @@ func (r *ManagerReconciler) desiredDeployment(manager *v1beta1.Manager) (metav1.
 	enableServiceLinks := false
 	probe := &corev1.Probe{
 		ProbeHandler: corev1.ProbeHandler{
-			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ManagerPort)},
+			TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(ManagerPort)},
 		},
 		InitialDelaySeconds: 10,
 		TimeoutSeconds:      5,

@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 package controller
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
@@ -37,6 +39,25 @@ const (
 	FrontPort = 80
 	RsyncPort = 873
 )
+
+func (r *JobReconciler) getFrontConfig(job *v1beta1.Job) (frontConfig string, err error) {
+	// TODO add caddy config to job crd
+	/*
+		if job.Spec.Config.CaddyConfig != "" {
+			return job.Spec.Config.CaddyConfig
+		}
+	*/
+	if r.Config.FrontConfig == "" {
+		return "", nil
+	}
+	frontConfig = r.Config.FrontConfig
+	var buf bytes.Buffer
+	if err = json.Compact(&buf, []byte(frontConfig)); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
 
 func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontCmd, rsyncCmd []string, frontMode, frontImage, rsyncImage string) {
 	frontMode, frontImage, rsyncImage = r.Config.FrontMode, r.Config.FrontImage, r.Config.RsyncImage
@@ -110,7 +131,30 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 	return &pvc, nil
 }
 
-func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*appsv1.Deployment, error) {
+func (r *JobReconciler) desiredFrontConfigmap(job *v1beta1.Job) (*corev1.ConfigMap, error) {
+	caddyConfig, err := r.getFrontConfig(job)
+	if err != nil {
+		return nil, err
+	}
+
+	if caddyConfig == "" {
+		return nil, nil
+	}
+
+	return &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: ConfigMapKind},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      job.Name + "-front",
+			Namespace: job.Namespace,
+			Labels:    map[string]string{"job": job.Name},
+		},
+		Data: map[string]string{
+			"frontConfig": caddyConfig,
+		},
+	}, nil
+}
+
+func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string, frontCM *corev1.ConfigMap) (*appsv1.Deployment, error) {
 	enableServiceLinks := false
 	app := appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{APIVersion: appsv1.SchemeGroupVersion.String(), Kind: "Deployment"},
@@ -204,7 +248,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		}
 		probe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(ApiPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
@@ -251,7 +295,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(FrontPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(FrontPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
@@ -275,6 +319,14 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 				{ContainerPort: FrontPort, Name: "front", Protocol: "TCP"},
 			},
 		}
+		if frontCM != nil {
+			frontContainer.VolumeMounts = append(frontContainer.VolumeMounts, corev1.VolumeMount{
+				Name:      frontCM.Name,
+				SubPath:   "frontConfig",
+				MountPath: "/etc/frontConfig",
+			})
+		}
+
 		if len(frontCmd) > 0 {
 			frontContainer.Command = frontCmd
 		}
@@ -283,7 +335,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	if !disableRsync {
 		rsyncProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(RsyncPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(RsyncPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,

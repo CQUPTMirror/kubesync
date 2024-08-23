@@ -44,6 +44,7 @@ type Config struct {
 	FrontImage   string
 	RsyncImage   string
 	FrontCmd     string
+	FrontConfig  string
 	RsyncCmd     string
 	FrontHost    string
 	FrontTLS     string
