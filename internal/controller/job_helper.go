@@ -204,7 +204,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 		}
 		probe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(ApiPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(ApiPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
@@ -251,7 +251,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	if !disableFront {
 		frontProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(FrontPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(FrontPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
@@ -283,7 +283,7 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string) (*ap
 	if !disableRsync {
 		rsyncProbe := &corev1.Probe{
 			ProbeHandler: corev1.ProbeHandler{
-				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt(RsyncPort)},
+				TCPSocket: &corev1.TCPSocketAction{Port: intstr.FromInt32(RsyncPort)},
 			},
 			InitialDelaySeconds: 10,
 			TimeoutSeconds:      5,
