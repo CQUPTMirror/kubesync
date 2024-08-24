@@ -1,5 +1,5 @@
 package controller
 
 const (
-	ConfigMapKind string = "Configmap"
+	ConfigMapKind string = "ConfigMap"
 )
