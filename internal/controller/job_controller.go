@@ -113,11 +113,6 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	}
 
 	if app != nil {
-		err = r.Patch(ctx, app, client.Apply, applyOpts...)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-
 		err = r.Patch(ctx, svc, client.Apply, applyOpts...)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -134,6 +129,10 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 					return ctrl.Result{}, err
 				}
 			}
+		}
+		err = r.Patch(ctx, app, client.Apply, applyOpts...)
+		if err != nil {
+			return ctrl.Result{}, err
 		}
 	} else {
 		deploy := new(appsv1.Deployment)
