@@ -320,6 +320,15 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string, fron
 			},
 		}
 		if frontCM != nil {
+			app.Spec.Template.Spec.Volumes = append(app.Spec.Template.Spec.Volumes, corev1.Volume{
+				Name: frontCM.Name,
+				VolumeSource: corev1.VolumeSource{
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						LocalObjectReference: corev1.LocalObjectReference{Name: frontCM.Name},
+					},
+				},
+			})
+
 			frontContainer.VolumeMounts = append(frontContainer.VolumeMounts, corev1.VolumeMount{
 				Name:      frontCM.Name,
 				SubPath:   "frontConfig",
