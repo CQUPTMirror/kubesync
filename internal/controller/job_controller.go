@@ -20,6 +20,7 @@ package controller
 import (
 	"context"
 	"errors"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -77,6 +78,7 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		err     error
 		ig      *v1.Ingress
 		frontCM *corev1.ConfigMap
+		sm      *monitoringv1.ServiceMonitor
 	)
 	disableFront, _, _, _, _, _, _ := r.checkRsyncFront(&job)
 	if !disableFront {
@@ -103,6 +105,10 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	svc, err := r.desiredService(&job)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if r.Config.EnableMetric {
+		sm = r.desiredServiceMonitor(&job)
 	}
 
 	applyOpts := []client.PatchOption{client.ForceOwnership, client.FieldOwner("mirror-controller")}
@@ -134,6 +140,13 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		if err != nil {
 			return ctrl.Result{}, err
 		}
+
+		if sm != nil {
+			err = r.Patch(ctx, sm, client.Apply, applyOpts...)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	} else {
 		deploy := new(appsv1.Deployment)
 		err := r.Get(ctx, client.ObjectKey{Name: job.Name, Namespace: job.Namespace}, deploy)
@@ -149,6 +162,10 @@ func (r *JobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			r.Delete(ctx, deploy)
 			r.Delete(ctx, &corev1.ConfigMap{
 				TypeMeta:   metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: ConfigMapKind},
+				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
+			})
+			r.Delete(ctx, &monitoringv1.ServiceMonitor{
+				TypeMeta:   metav1.TypeMeta{APIVersion: monitoringv1.SchemeGroupVersion.String(), Kind: "ServiceMonitor"},
 				ObjectMeta: metav1.ObjectMeta{Name: job.Name, Namespace: job.Namespace},
 			})
 		}

@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/CQUPTMirror/kubesync/api/v1beta1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -35,9 +36,10 @@ import (
 )
 
 const (
-	ApiPort   = 6000
-	FrontPort = 80
-	RsyncPort = 873
+	ApiPort    = 6000
+	FrontPort  = 80
+	RsyncPort  = 873
+	MetricPort = 2019
 )
 
 func (r *JobReconciler) getFrontConfig(job *v1beta1.Job) (frontConfig string, err error) {
@@ -105,7 +107,7 @@ func (r *JobReconciler) desiredPersistentVolumeClaim(job *v1beta1.Job) (*corev1.
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      job.Name,
 			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
+			Labels:    getCommonLabels(job),
 		},
 		Spec: corev1.PersistentVolumeClaimSpec{
 			Resources: corev1.VolumeResourceRequirements{
@@ -154,7 +156,7 @@ func (r *JobReconciler) desiredFrontConfigmap(job *v1beta1.Job) (*corev1.ConfigM
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      job.Name + "-front",
 			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
+			Labels:    getCommonLabels(job),
 		},
 		Data: map[string]string{
 			"frontConfig": caddyConfig,
@@ -169,15 +171,15 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string, fron
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      job.Name,
 			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
+			Labels:    getCommonLabels(job),
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"job": job.Name},
+				MatchLabels: getCommonLabels(job),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{"job": job.Name},
+					Labels: getCommonLabels(job),
 				},
 				Spec: corev1.PodSpec{
 					EnableServiceLinks: &enableServiceLinks,
@@ -347,6 +349,10 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string, fron
 			})
 		}
 
+		if r.Config.EnableMetric {
+			frontContainer.Ports = append(frontContainer.Ports, corev1.ContainerPort{ContainerPort: MetricPort, Name: "metrics", Protocol: "TCP"})
+		}
+
 		if len(frontCmd) > 0 {
 			frontContainer.Command = frontCmd
 		}
@@ -399,15 +405,15 @@ func (r *JobReconciler) desiredService(job *v1beta1.Job) (*corev1.Service, error
 	svc := corev1.Service{
 		TypeMeta: metav1.TypeMeta{APIVersion: corev1.SchemeGroupVersion.String(), Kind: "Service"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      job.Name,
+			Name:      serviceName(job.Name),
 			Namespace: job.Namespace,
-			Labels:    map[string]string{"job": job.Name},
+			Labels:    getCommonLabels(job),
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{Name: "api", Port: ApiPort, Protocol: "TCP", TargetPort: intstr.FromString("api")},
 			},
-			Selector: map[string]string{"job": job.Name},
+			Selector: getCommonLabels(job),
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
@@ -417,6 +423,9 @@ func (r *JobReconciler) desiredService(job *v1beta1.Job) (*corev1.Service, error
 	}
 	if !disableRsync {
 		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "rsync", Port: RsyncPort, Protocol: "TCP", TargetPort: intstr.FromString("rsync")})
+	}
+	if r.Config.EnableMetric {
+		svc.Spec.Ports = append(svc.Spec.Ports, corev1.ServicePort{Name: "metrics", Port: MetricPort, Protocol: "TCP", TargetPort: intstr.FromString("metrics")})
 	}
 
 	if err := ctrl.SetControllerReference(job, &svc, r.Scheme); err != nil {
@@ -441,7 +450,7 @@ func (r *JobReconciler) desiredIngress(job *v1beta1.Job) (*v1.Ingress, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        job.Name,
 			Namespace:   job.Namespace,
-			Labels:      map[string]string{"job": job.Name},
+			Labels:      getCommonLabels(job),
 			Annotations: annotations,
 		},
 		Spec: v1.IngressSpec{
@@ -455,7 +464,7 @@ func (r *JobReconciler) desiredIngress(job *v1beta1.Job) (*v1.Ingress, error) {
 									PathType: &pathType,
 									Backend: v1.IngressBackend{
 										Service: &v1.IngressServiceBackend{
-											Name: job.Name,
+											Name: serviceName(job.Name),
 											Port: v1.ServiceBackendPort{Name: "front"},
 										},
 									},
@@ -494,4 +503,34 @@ func (r *JobReconciler) desiredIngress(job *v1beta1.Job) (*v1.Ingress, error) {
 		return &ig, err
 	}
 	return &ig, nil
+}
+
+func (r *JobReconciler) desiredServiceMonitor(job *v1beta1.Job) *monitoringv1.ServiceMonitor {
+	sm := monitoringv1.ServiceMonitor{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: monitoringv1.SchemeGroupVersion.String(),
+			Kind:       "ServiceMonitor",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      job.Name,
+			Namespace: job.Namespace,
+			Labels:    getCommonLabels(job),
+		},
+		Spec: monitoringv1.ServiceMonitorSpec{
+			JobLabel: "job",
+			NamespaceSelector: monitoringv1.NamespaceSelector{
+				MatchNames: []string{job.Namespace},
+			},
+			Selector: metav1.LabelSelector{
+				MatchLabels: getCommonLabels(job),
+			},
+			Endpoints: []monitoringv1.Endpoint{
+				{
+					Port: "metrics",
+					Path: "/",
+				},
+			},
+		},
+	}
+	return &sm
 }
