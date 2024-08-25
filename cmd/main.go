@@ -153,6 +153,11 @@ func getConfig() controller.Config {
 		debug = true
 	}
 
+	enableMetric := false
+	if os.Getenv("ENABLE_METRIC") != "" {
+		enableMetric = true
+	}
+
 	c := controller.Config{
 		ManagerImage: os.Getenv("MANAGER_IMAGE"),
 		WorkerImage:  os.Getenv("WORKER_IMAGE"),
@@ -170,6 +175,7 @@ func getConfig() controller.Config {
 		FrontTLS:     os.Getenv("FRONT_TLS"),
 		FrontClass:   os.Getenv("FRONT_CLASS"),
 		FrontAnn:     annItems,
+		EnableMetric: enableMetric,
 		Debug:        debug,
 	}
 
@@ -184,59 +190,76 @@ func mergeDefaults(config *controller.Config) {
 	defaultConfig := &controller.Config{
 		ManagerImage: "cquptmirror/manager:latest",
 		WorkerImage:  "cquptmirror/worker:latest",
-		FrontMode:    "caddy",
+		FrontMode:    "cquptmirror/caddy:latest",
 		RsyncImage:   "",
-		FrontCmd:     "caddy run -c /etc/frontConfig",
-		FrontConfig: `{
-	"apps": {
+		FrontCmd:     "",
+		FrontConfig: `
+{
+    "logging": {
+        "logs": {
+            "default": {},
+            "loki": {
+                "writer": {
+                    "labels": {
+                        "job": "{env.JOB_NAME}",
+                        "instance": "{env.HOSTNAME}",
+                        "component": "caddy"
+                    },
+                    "output": "loki",
+                    "url": "http://loki:3000/loki/api/v1/push"
+                },
+                "encoder": {
+                    "format": "json"
+                },
+                "level": "INFO",
+                "include": [
+                    "http.log.access"
+                ]
+            }
+        }
+    },
+    "apps": {
         "http": {
             "servers": {
-                "static": {
+                "metric": {
                     "listen": [
-                        ":80"
+                        ":2019"
                     ],
-                    "read_header_timeout": 10000000000,
-                    "idle_timeout": 30000000000,
-                    "max_header_bytes": 10240,
                     "routes": [
                         {
                             "handle": [
                                 {
-                                    "encodings": {
-                                        "gzip": {
-
-                                        },
-                                        "zstd": {
-
-                                        }
-                                    },
-                                    "handler": "encode",
-                                    "prefer": [
-                                        "zstd",
-                                        "gzip"
-                                    ]
-                                },
+                                    "handler": "metrics"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "file_server": {
+                    "listen": [
+                        ":80"
+                    ],
+                    "routes": [
+                        {
+                            "handle": [
                                 {
-                                    "browse": {
-
-                                    },
+                                    "browse": {},
                                     "handler": "file_server",
-                                    "root": "/data",
-                                    "index_names": [
-                                        "_noindex"
-                                    ]
+                                    "root": "/data"
                                 }
                             ]
                         }
                     ],
-                    "automatic_https": {
-                        "disable": true
-					}
-				}
-			}
-		}
-	}}
-	`,
+                    "logs": {
+                        "default_logger_name": "loki"
+                    },
+                    "metrics": {}
+                }
+            }
+        }
+    }
+}
+		`,
 		RsyncCmd:   "",
 		FrontHost:  "mirrors.cqupt.edu.cn",
 		FrontTLS:   "",
@@ -244,7 +267,8 @@ func mergeDefaults(config *controller.Config) {
 		FrontAnn: map[string]string{
 			"traefik.ingress.kubernetes.io/router.entrypoints": "web",
 		},
-		Debug: false,
+		EnableMetric: false,
+		Debug:        false,
 	}
 
 	// 用反射实现

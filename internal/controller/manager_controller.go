@@ -50,6 +50,7 @@ type Config struct {
 	FrontTLS     string
 	FrontClass   string
 	FrontAnn     map[string]string
+	EnableMetric bool
 	Debug        bool
 }
 

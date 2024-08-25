@@ -307,8 +307,11 @@ func (r *JobReconciler) desiredDeployment(job *v1beta1.Job, manager string, fron
 			Name:            job.Name + "-front",
 			Image:           frontImage,
 			ImagePullPolicy: pullPolicy,
-			LivenessProbe:   frontProbe,
-			ReadinessProbe:  frontProbe,
+			Env: []corev1.EnvVar{
+				{Name: "JOB_NAME", Value: job.Name},
+			},
+			LivenessProbe:  frontProbe,
+			ReadinessProbe: frontProbe,
 			VolumeMounts: []corev1.VolumeMount{
 				{
 					Name:      job.Name,
