@@ -61,7 +61,19 @@ func (r *JobReconciler) getFrontConfig(job *v1beta1.Job) (frontConfig string, er
 
 func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disableRsync bool, frontCmd, rsyncCmd []string, frontMode, frontImage, rsyncImage string) {
 	frontMode, frontImage, rsyncImage = r.Config.FrontMode, r.Config.FrontImage, r.Config.RsyncImage
-	frontCmd, rsyncCmd = strings.Split(r.Config.FrontCmd, " "), strings.Split(r.Config.RsyncCmd, " ")
+
+	if job.Spec.Deploy.FrontCmd != "" {
+		frontCmd = strings.Split(job.Spec.Deploy.FrontCmd, " ")
+	} else if r.Config.FrontCmd != "" {
+		frontCmd = strings.Split(r.Config.FrontCmd, " ")
+	}
+
+	if job.Spec.Deploy.RsyncCmd != "" {
+		rsyncCmd = strings.Split(job.Spec.Deploy.RsyncCmd, " ")
+	} else if r.Config.RsyncCmd != "" {
+		rsyncCmd = strings.Split(r.Config.RsyncCmd, " ")
+	}
+
 	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableFront); err == nil {
 		disableFront = s
 	}
@@ -73,9 +85,7 @@ func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disable
 	} else if frontImage == "" {
 		frontImage = frontMode + ":latest"
 	}
-	if job.Spec.Deploy.FrontCmd != "" {
-		frontCmd = strings.Split(job.Spec.Deploy.FrontCmd, " ")
-	}
+
 	if s, err := strconv.ParseBool(job.Spec.Deploy.DisableRsync); err == nil {
 		disableRsync = s
 	}
@@ -85,9 +95,7 @@ func (r *JobReconciler) checkRsyncFront(job *v1beta1.Job) (disableFront, disable
 	if rsyncImage == "" {
 		disableRsync = true
 	}
-	if job.Spec.Deploy.RsyncCmd != "" {
-		rsyncCmd = strings.Split(job.Spec.Deploy.RsyncCmd, " ")
-	}
+
 	return
 }
 
