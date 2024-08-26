@@ -4,9 +4,9 @@ import "github.com/CQUPTMirror/kubesync/api/v1beta1"
 
 func getCommonLabels(job *v1beta1.Job) map[string]string {
 	labels := map[string]string{
-		"kubernetes.io/app":        job.Name,
-		"kubernetes.io/component":  "mirror",
-		"kubernetes.io/managed-by": "kubesync",
+		"app.kubernetes.io/app":        job.Name,
+		"app.kubernetes.io/component":  "mirror",
+		"app.kubernetes.io/managed-by": "kubesync",
 	}
 
 	return labels

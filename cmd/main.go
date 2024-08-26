@@ -19,6 +19,8 @@ package main
 
 import (
 	"flag"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	"log"
 	"os"
 	"reflect"
 	"strings"
@@ -93,6 +95,11 @@ func main() {
 	}
 
 	config := getConfig()
+
+	// Register the ServiceMonitor API
+	if err := monitoringv1.AddToScheme(mgr.GetScheme()); err != nil {
+		log.Fatalf("unable to register ServiceMonitor API: %v", err)
+	}
 
 	if err = (&controller.JobReconciler{
 		Client: mgr.GetClient(),
