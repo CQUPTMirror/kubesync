@@ -1,6 +1,7 @@
 name: Build and Push Docker Images
 
 on:
+  workflow_dispatch:
   push:
     paths-ignore:
       - 'README.md'
